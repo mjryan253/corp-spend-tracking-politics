@@ -98,49 +98,42 @@ All endpoints support standard REST operations (GET, POST, PUT, DELETE).
 
 ## Data Ingestion Pipeline
 
-The application includes a modular data ingestion pipeline that collects data from multiple government sources:
+The application collects data from multiple government sources:
 
 ### **Data Sources:**
-- **FEC API**: Political contributions from corporate PACs
-- **Senate LDA**: Lobbying expenditures and reports
-- **IRS/ProPublica**: Charitable grants and foundation data
-- **SEC EDGAR**: Financial data and company information
+- **FEC API**: Political contributions (requires API key)
+- **Senate LDA**: Lobbying expenditures (public data)
+- **IRS/ProPublica**: Charitable grants (requires API key)
+- **SEC EDGAR**: Financial data (requires API key)
 
-### **Features:**
-- **Modular Design**: Each data source has its own ingestion module
-- **Company Linking**: Automatically links companies across different datasets
-- **Classification System**: Categorizes charitable grants (Religious, Education, Healthcare, etc.)
-- **Data Quality Reporting**: Monitors data completeness and quality
-- **Dry Run Mode**: Test data ingestion without saving to database
+### **Key Features:**
+- **Company Linking**: Automatically matches companies across datasets
+- **Grant Classification**: Categorizes charitable grants (Religious, Education, Healthcare, etc.)
+- **Data Quality Monitoring**: Tracks completeness and quality metrics
+- **Dry Run Mode**: Test without saving data
 
-### **Usage:**
+### **Quick Start:**
 
-1. **Set up API keys** in your `.env` file:
+1. **Get API keys** from:
+   - FEC: https://api.open.fec.gov/developers/
+   - ProPublica: https://www.propublica.org/datastore/api
+   - SEC-API: https://sec-api.io/
+
+2. **Configure** in `.env` file:
 ```
-FEC_API_KEY=your_fec_api_key_here
-PROPUBLICA_API_KEY=your_propublica_api_key_here
-SEC_API_KEY=your_sec_api_key_here
+FEC_API_KEY=your_key_here
+PROPUBLICA_API_KEY=your_key_here
+SEC_API_KEY=your_key_here
 ```
 
-2. **Test the pipeline**:
+3. **Test & Run**:
 ```bash
 python manage.py test_ingestion
-```
-
-3. **Run data ingestion**:
-```bash
-# Dry run (no data saved)
 python manage.py ingest_data --dry-run
-
-# Full ingestion
 python manage.py ingest_data
-
-# Specific sources only
-python manage.py ingest_data --sources fec lobbying
-
-# Specific year
-python manage.py ingest_data --year 2023
 ```
+
+📖 **For detailed configuration, see [in-depth-configuration.md](in-depth-configuration.md)**
 
 ## Next Steps
 
