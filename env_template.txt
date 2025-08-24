@@ -1,0 +1,11 @@
+# Database Configuration
+# Copy this to .env file and update with your actual values
+DB_NAME=corp_spend_tracker
+DB_USER=postgres
+DB_PASSWORD=your_actual_password_here
+DB_HOST=jwst.domain.castle
+DB_PORT=5432
+
+# Django Configuration
+SECRET_KEY=your-secret-key-here
+DEBUG=True

@@ -43,9 +43,10 @@ pip install -r requirements.txt
 ```
 
 4. Set up PostgreSQL database:
-   - Install PostgreSQL
-   - Create database: `corp_spend_tracker`
-   - Update database credentials in `corp_spend_tracker/settings.py`
+   - Download and install PostgreSQL from https://www.postgresql.org/download/windows/
+   - Use default settings during installation
+   - Set password for 'postgres' user to 'postgres'
+   - Run the setup script: `python setup_postgres.py` or double-click `setup_postgres.bat`
 
 5. Run migrations:
 ```bash
@@ -62,6 +63,16 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+8. Create sample data (optional):
+```bash
+python manage.py create_sample_data
+```
+
+9. Run tests:
+```bash
+python manage.py test data_collection
+```
+
 ## Database Schema
 
 The application uses the following main models:
@@ -70,6 +81,20 @@ The application uses the following main models:
 - **LobbyingReport**: Quarterly lobbying expenditures
 - **PoliticalContribution**: Campaign contributions
 - **CharitableGrant**: Foundation grants and donations
+
+## API Endpoints
+
+The application provides REST API endpoints for all models:
+
+- `GET /api/companies/` - List all companies
+- `GET /api/companies/{id}/` - Get detailed company information with related data
+- `GET /api/companies/{id}/spending_summary/` - Get spending summary for a company
+- `GET /api/financial-summaries/` - List financial summaries
+- `GET /api/lobbying-reports/` - List lobbying reports
+- `GET /api/political-contributions/` - List political contributions
+- `GET /api/charitable-grants/` - List charitable grants
+
+All endpoints support standard REST operations (GET, POST, PUT, DELETE).
 
 ## Next Steps
 
@@ -82,6 +107,6 @@ The application uses the following main models:
 
 ## Project Status
 
-✅ **Completed**: Tasks 1-2 (Technology stack finalized, development environment set up)
-🔄 **In Progress**: Task 3 (Django models implemented, ready for database setup)
-⏳ **Pending**: Tasks 4-11 (Data ingestion, API, frontend, deployment)
+✅ **Completed**: Tasks 1-3 (Technology stack finalized, development environment set up, Django models implemented)
+🔄 **In Progress**: Task 4 (Data ingestion pipeline)
+⏳ **Pending**: Tasks 5-11 (API endpoints, frontend, visualization, deployment)
