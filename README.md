@@ -13,17 +13,19 @@ This application will collect and analyze data from:
 ## Technology Stack
 
 - **Backend**: Python with Django and Django REST Framework (DRF)
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL (required)
 - **Frontend**: HTML, CSS, and JavaScript
 
 ## Development Setup
 
 ### Prerequisites
 - Python 3.13+
-- PostgreSQL (for production)
+- PostgreSQL
 - Git
 
 ### Installation
+
+**⚠️ Important**: This application requires PostgreSQL. SQLite is not supported.
 
 1. Clone the repository:
 ```bash
@@ -37,8 +39,9 @@ py -3 -m venv venv
 .\venv\Scripts\Activate.ps1  # Windows
 ```
 
-3. Install dependencies:
+3. Install backend dependencies:
 ```bash
+cd backend
 pip install -r requirements.txt
 ```
 
@@ -47,6 +50,7 @@ pip install -r requirements.txt
    - Use default settings during installation
    - Set password for 'postgres' user to 'postgres'
    - Run the setup script: `python setup_postgres.py` or double-click `setup_postgres.bat`
+   - Configure your database credentials in the `.env` file
 
 5. Run migrations:
 ```bash
@@ -58,24 +62,45 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-7. Run development server:
-```bash
-python manage.py runserver
-```
-
-8. Create sample data (optional):
+7. Create sample data (optional):
 ```bash
 python manage.py create_sample_data
 ```
 
-9. Run tests:
+8. Run tests:
 ```bash
 python manage.py test data_collection
 ```
 
+### Running the Application
+
+#### Option 1: Quick Start (Windows)
+Double-click one of these files to start both servers automatically:
+- `start_dev.bat` (Command Prompt)
+- `start_dev.ps1` (PowerShell)
+
+#### Option 2: Manual Start
+
+1. **Start the backend server**:
+```bash
+cd backend
+python manage.py runserver
+```
+
+2. **Start the frontend server** (in a new terminal):
+```bash
+cd frontend
+python server.py
+```
+
+3. **Open your browser** and navigate to:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000/api/
+   - Admin Panel: http://localhost:8000/admin/
+
 ## Database Schema
 
-The application uses the following main models:
+The application uses PostgreSQL with the following main models:
 - **Company**: Central company information
 - **FinancialSummary**: Annual financial data
 - **LobbyingReport**: Quarterly lobbying expenditures
@@ -155,12 +180,12 @@ python manage.py ingest_data
 - [x] Set up PostgreSQL database
 - [x] Implement data ingestion pipeline
 - [x] Build REST API endpoints with advanced features
-- [ ] Create frontend interface
-- [ ] Add data visualization
+- [x] Create frontend interface with Alpine.js and Tailwind CSS
+- [ ] Add data visualization and analytics
 - [ ] Deploy to production
 
 ## Project Status
 
-✅ **Completed**: Tasks 1-5 (Technology stack finalized, development environment set up, Django models implemented, data ingestion pipeline built, REST API endpoints with advanced features)
-🔄 **In Progress**: Task 6 (Frontend interface)
-⏳ **Pending**: Tasks 7-11 (Data visualization, deployment, advanced features)
+✅ **Completed**: Tasks 1-6 (Technology stack finalized, development environment set up, Django models implemented, data ingestion pipeline built, REST API endpoints with advanced features, frontend interface with Alpine.js and Tailwind CSS)
+🔄 **In Progress**: Task 7 (Data visualization and analytics)
+⏳ **Pending**: Tasks 8-11 (Advanced features, deployment, optimization)
