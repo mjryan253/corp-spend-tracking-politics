@@ -96,10 +96,56 @@ The application provides REST API endpoints for all models:
 
 All endpoints support standard REST operations (GET, POST, PUT, DELETE).
 
+## Data Ingestion Pipeline
+
+The application includes a modular data ingestion pipeline that collects data from multiple government sources:
+
+### **Data Sources:**
+- **FEC API**: Political contributions from corporate PACs
+- **Senate LDA**: Lobbying expenditures and reports
+- **IRS/ProPublica**: Charitable grants and foundation data
+- **SEC EDGAR**: Financial data and company information
+
+### **Features:**
+- **Modular Design**: Each data source has its own ingestion module
+- **Company Linking**: Automatically links companies across different datasets
+- **Classification System**: Categorizes charitable grants (Religious, Education, Healthcare, etc.)
+- **Data Quality Reporting**: Monitors data completeness and quality
+- **Dry Run Mode**: Test data ingestion without saving to database
+
+### **Usage:**
+
+1. **Set up API keys** in your `.env` file:
+```
+FEC_API_KEY=your_fec_api_key_here
+PROPUBLICA_API_KEY=your_propublica_api_key_here
+SEC_API_KEY=your_sec_api_key_here
+```
+
+2. **Test the pipeline**:
+```bash
+python manage.py test_ingestion
+```
+
+3. **Run data ingestion**:
+```bash
+# Dry run (no data saved)
+python manage.py ingest_data --dry-run
+
+# Full ingestion
+python manage.py ingest_data
+
+# Specific sources only
+python manage.py ingest_data --sources fec lobbying
+
+# Specific year
+python manage.py ingest_data --year 2023
+```
+
 ## Next Steps
 
-- [ ] Set up PostgreSQL database
-- [ ] Implement data ingestion pipeline
+- [x] Set up PostgreSQL database
+- [x] Implement data ingestion pipeline
 - [ ] Build REST API endpoints
 - [ ] Create frontend interface
 - [ ] Add data visualization
@@ -107,6 +153,6 @@ All endpoints support standard REST operations (GET, POST, PUT, DELETE).
 
 ## Project Status
 
-✅ **Completed**: Tasks 1-3 (Technology stack finalized, development environment set up, Django models implemented)
-🔄 **In Progress**: Task 4 (Data ingestion pipeline)
-⏳ **Pending**: Tasks 5-11 (API endpoints, frontend, visualization, deployment)
+✅ **Completed**: Tasks 1-4 (Technology stack finalized, development environment set up, Django models implemented, data ingestion pipeline built)
+🔄 **In Progress**: Task 5 (REST API endpoints)
+⏳ **Pending**: Tasks 6-11 (Frontend interface, data visualization, deployment)
