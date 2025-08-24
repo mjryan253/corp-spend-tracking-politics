@@ -88,8 +88,8 @@ class CompanyAPITest(APITestCase):
         url = reverse('company-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'API Test Company')
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'API Test Company')
 
     def test_get_company_detail(self):
         url = reverse('company-detail', args=[self.company.id])
@@ -104,7 +104,7 @@ class CompanyAPITest(APITestCase):
         url = reverse('company-spending-summary', args=[self.company.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['company_name'], 'API Test Company')
-        self.assertEqual(response.data['total_lobbying'], 100000.0)
-        self.assertEqual(response.data['total_charitable'], 50000.0)
-        self.assertEqual(response.data['total_spending'], 150000.0)
+        self.assertEqual(response.data['company']['name'], 'API Test Company')
+        self.assertEqual(response.data['spending_totals']['lobbying'], 100000.0)
+        self.assertEqual(response.data['spending_totals']['charitable'], 50000.0)
+        self.assertEqual(response.data['spending_totals']['total'], 150000.0)

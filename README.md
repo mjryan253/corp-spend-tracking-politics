@@ -84,17 +84,32 @@ The application uses the following main models:
 
 ## API Endpoints
 
-The application provides REST API endpoints for all models:
+The application provides comprehensive REST API endpoints with advanced filtering, search, and analytics:
 
-- `GET /api/companies/` - List all companies
-- `GET /api/companies/{id}/` - Get detailed company information with related data
-- `GET /api/companies/{id}/spending_summary/` - Get spending summary for a company
-- `GET /api/financial-summaries/` - List financial summaries
-- `GET /api/lobbying-reports/` - List lobbying reports
-- `GET /api/political-contributions/` - List political contributions
-- `GET /api/charitable-grants/` - List charitable grants
+### **Core Endpoints:**
+- `GET /api/companies/` - List companies with filtering and search
+- `GET /api/companies/{id}/` - Get detailed company information
+- `GET /api/companies/{id}/spending_summary/` - Get comprehensive spending analysis
+- `GET /api/companies/top_spenders/` - Get top spending companies
+- `GET /api/companies/search/` - Advanced company search
 
-All endpoints support standard REST operations (GET, POST, PUT, DELETE).
+### **Analytics Endpoints:**
+- `GET /api/financial-summaries/financial_ratios/` - Calculate financial ratios
+- `GET /api/lobbying-reports/spending_trends/` - Lobbying spending trends
+- `GET /api/lobbying-reports/top_issues/` - Most lobbied issues
+- `GET /api/political-contributions/contribution_trends/` - Political contribution trends
+- `GET /api/political-contributions/party_breakdown/` - Contributions by party
+- `GET /api/charitable-grants/category_breakdown/` - Grants by category
+- `GET /api/charitable-grants/grant_trends/` - Grant spending trends
+
+### **Features:**
+- **Filtering**: Filter by any model field
+- **Search**: Full-text search across relevant fields
+- **Pagination**: Automatic pagination with customizable page sizes
+- **Sorting**: Sort by any field (ascending/descending)
+- **Analytics**: Built-in aggregation and trend analysis
+
+📖 **For complete API documentation, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md)**
 
 ## Data Ingestion Pipeline
 
@@ -139,13 +154,13 @@ python manage.py ingest_data
 
 - [x] Set up PostgreSQL database
 - [x] Implement data ingestion pipeline
-- [ ] Build REST API endpoints
+- [x] Build REST API endpoints with advanced features
 - [ ] Create frontend interface
 - [ ] Add data visualization
 - [ ] Deploy to production
 
 ## Project Status
 
-✅ **Completed**: Tasks 1-4 (Technology stack finalized, development environment set up, Django models implemented, data ingestion pipeline built)
-🔄 **In Progress**: Task 5 (REST API endpoints)
-⏳ **Pending**: Tasks 6-11 (Frontend interface, data visualization, deployment)
+✅ **Completed**: Tasks 1-5 (Technology stack finalized, development environment set up, Django models implemented, data ingestion pipeline built, REST API endpoints with advanced features)
+🔄 **In Progress**: Task 6 (Frontend interface)
+⏳ **Pending**: Tasks 7-11 (Data visualization, deployment, advanced features)
