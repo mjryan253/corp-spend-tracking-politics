@@ -80,16 +80,26 @@ WSGI_APPLICATION = 'corp_spend_tracker.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Use local database by default for development
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME', 'corp_spend_tracker'),
         'USER': os.getenv('DB_USER', 'postgres'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-        'HOST': os.getenv('DB_HOST', 'jwst.domain.castle'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),  # Changed from jwst.domain.castle to localhost
         'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
+
+# Fallback to SQLite for development if PostgreSQL is not available
+if os.getenv('USE_SQLITE', 'false').lower() == 'true':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation

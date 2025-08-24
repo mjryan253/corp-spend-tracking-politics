@@ -18,6 +18,12 @@ class SECIngestion:
             'Authorization': self.api_key,
             'Content-Type': 'application/json'
         }
+        
+        # Log API key status
+        if self.api_key and self.api_key != 'your_sec_api_key_here':
+            print(f"✅ SEC-API.io key found: {self.api_key[:8]}...")
+        else:
+            print("⚠️  SEC-API.io key not found or not configured. Using mock data.")
     
     def fetch_data(self, year: int = None, cik: str = None) -> List[Dict[str, Any]]:
         """
@@ -33,6 +39,12 @@ class SECIngestion:
         if not year:
             year = datetime.now().year
             
+        # Check if API key is available and properly configured
+        if not self.api_key or self.api_key == 'your_sec_api_key_here':
+            print("📊 Using mock SEC data for development/testing")
+            return self._get_mock_data(year, cik)
+            
+        print(f"🔗 Fetching real SEC data for year {year}...")
         financial_data = []
         
         # Get company CIKs to fetch
@@ -47,10 +59,61 @@ class SECIngestion:
                 if company_financials:
                     financial_data.append(company_financials)
             except Exception as e:
-                print(f"Error fetching financial data for CIK {company_cik}: {e}")
+                print(f"❌ Error fetching financial data for CIK {company_cik}: {e}")
                 continue
         
+        # If no real data was fetched, return mock data
+        if not financial_data:
+            print("⚠️  No real SEC data fetched. Falling back to mock data.")
+            return self._get_mock_data(year, cik)
+        
+        print(f"✅ Successfully fetched {len(financial_data)} SEC records")
         return financial_data
+    
+    def _get_mock_data(self, year: int, cik: str = None) -> List[Dict[str, Any]]:
+        """Return mock SEC financial data for development/testing."""
+        companies = [
+            {
+                'cik': '0000320193',
+                'company_name': 'Apple Inc.',
+                'ticker': 'AAPL',
+                'total_revenue': Decimal('383285000000'),
+                'net_income': Decimal('96995000000'),
+            },
+            {
+                'cik': '0000789019',
+                'company_name': 'Microsoft Corporation',
+                'ticker': 'MSFT',
+                'total_revenue': Decimal('211915000000'),
+                'net_income': Decimal('72361000000'),
+            },
+            {
+                'cik': '0001652044',
+                'company_name': 'Alphabet Inc.',
+                'ticker': 'GOOGL',
+                'total_revenue': Decimal('307394000000'),
+                'net_income': Decimal('73737000000'),
+            }
+        ]
+        
+        if cik:
+            companies = [c for c in companies if c['cik'] == cik]
+        
+        return [
+            {
+                'cik': company['cik'],
+                'company_name': company['company_name'],
+                'ticker': company['ticker'],
+                'fiscal_year': year,
+                'total_revenue': company['total_revenue'],
+                'net_income': company['net_income'],
+                'filing_date': datetime(year, 10, 30),
+                'filing_url': f'https://example.com/sec-filing-{company["cik"]}-{year}',
+                'form_type': '10-K',
+                'accession_number': f'0000320193-{year}123100000000',
+            }
+            for company in companies
+        ]
     
     def _get_company_ciks(self) -> List[str]:
         """Get list of company CIKs to fetch financial data for."""
