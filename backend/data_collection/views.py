@@ -1,5 +1,6 @@
+from django.shortcuts import render
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,12 +8,81 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
+import json
+import os
+from django.conf import settings
 
 from .models import Company, FinancialSummary, LobbyingReport, PoliticalContribution, CharitableGrant
 from .serializers import (
     CompanySerializer, CompanyDetailSerializer, FinancialSummarySerializer,
     LobbyingReportSerializer, PoliticalContributionSerializer, CharitableGrantSerializer
 )
+
+# Simple logging function
+@api_view(['POST'])
+def log_frontend(request):
+    """Simple endpoint to receive frontend logs"""
+    try:
+        log_data = request.data
+        timestamp = log_data.get('timestamp', datetime.now().isoformat())
+        level = log_data.get('level', 'INFO')
+        message = log_data.get('message', '')
+        data = log_data.get('data')
+        user_agent = log_data.get('userAgent', '')
+        url = log_data.get('url', '')
+        
+        # Create log entry
+        log_entry = {
+            'timestamp': timestamp,
+            'level': level,
+            'message': message,
+            'data': data,
+            'user_agent': user_agent,
+            'url': url
+        }
+        
+        # Write to log file
+        log_file_path = os.path.join(settings.BASE_DIR, 'frontend_debug.log')
+        
+        with open(log_file_path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
+        
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+def get_logs(request):
+    """Simple endpoint to retrieve logs"""
+    try:
+        log_file_path = os.path.join(settings.BASE_DIR, 'frontend_debug.log')
+        
+        if not os.path.exists(log_file_path):
+            return Response({'logs': []}, status=status.HTTP_200_OK)
+        
+        logs = []
+        with open(log_file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                try:
+                    log_entry = json.loads(line.strip())
+                    logs.append(log_entry)
+                except json.JSONDecodeError:
+                    continue
+        
+        # Return last 50 logs
+        logs = logs[-50:]
+        
+        return Response({'logs': logs}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 class CompanyViewSet(viewsets.ModelViewSet):

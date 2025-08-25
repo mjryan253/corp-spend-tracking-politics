@@ -11,4 +11,6 @@ router.register(r'charitable-grants', views.CharitableGrantViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+    path('api/logs/', views.log_frontend, name='log-frontend'),
+    path('api/logs/get/', views.get_logs, name='get-logs'),
 ]

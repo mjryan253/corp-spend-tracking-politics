@@ -46,7 +46,7 @@ The application can work with real government data if you provide API keys. Thes
 
 1. **Copy the example file**:
    ```bash
-   copy env_example.txt .env
+   copy env.example .env
    ```
 
 2. **Choose your database configuration**:
@@ -89,19 +89,6 @@ FEC_API_KEY=abc123def456ghi789
 PROPUBLICA_API_KEY=xyz789abc123def456
 SEC_API_KEY=def456ghi789abc123
 ```
-
-### Using the Setup Script
-
-For an interactive setup experience, run:
-
-```bash
-python setup_env.py
-```
-
-This script will guide you through:
-- Database configuration
-- API key setup
-- Environment file creation
 
 ### Verifying API Key Status
 
@@ -162,7 +149,7 @@ pip install -r requirements.txt
 4. **Set up environment variables**:
    ```bash
    # Copy the example file and edit as needed
-   copy env_example.txt .env
+   copy env.example .env
    ```
 
 **Environment Configuration Options**:
@@ -197,7 +184,7 @@ USE_SQLITE=false
 5. **Set up database**:
 ```bash
 # For PostgreSQL:
-python setup_postgres.py
+# Ensure PostgreSQL is running and accessible
 
 # For SQLite (no setup needed):
 # Just run migrations
@@ -227,12 +214,27 @@ python manage.py test_ingestion
 
 ### Running the Application
 
-#### Option 1: Quick Start (Windows)
-Double-click one of these files to start both servers automatically:
-- `start_dev.bat` (Command Prompt)
-- `start_dev.ps1` (PowerShell)
+**🚀 Recommended: Use Docker (Easiest)**
 
-#### Option 2: Manual Start
+For the simplest setup, use Docker:
+
+```bash
+# Copy environment template
+cp env.example .env
+# Edit .env with your database credentials
+
+# Build and run with Docker
+docker-compose up --build
+```
+
+**Access the application:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api/
+- Admin Panel: http://localhost:8000/admin/
+
+📖 **For detailed Docker setup instructions, see [README_DOCKER.md](README_DOCKER.md)**
+
+#### Manual Development Setup
 
 1. **Start the backend server**:
 ```bash

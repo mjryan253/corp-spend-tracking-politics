@@ -1,12 +1,61 @@
 # In-Depth Configuration Guide
 
+## Overview
+
+This document provides detailed information about the Corporate Spending Tracker's containerized architecture, data sources, API connections, and configuration options.
+
+## Containerized Architecture
+
+### Docker Setup
+The application is containerized using Docker Compose with two main services:
+
+**Backend Service**:
+- **Image**: Python 3.11-slim
+- **Port**: 8000
+- **Database**: PostgreSQL (external at `jwst.domain.castle:5432`)
+- **Environment**: Loaded from `backend/.env`
+- **Startup**: Automatic migrations, superuser creation, static file collection
+
+**Frontend Service**:
+- **Image**: Python 3.11-slim with HTTP server
+- **Port**: 3000
+- **Proxy**: Serves static files and proxies API requests to backend
+- **No nginx**: Uses Python HTTP server for simplicity
+
+### Environment Configuration
+The application uses environment variables for configuration, loaded from `backend/.env`:
+
+```bash
+# Database Configuration
+DB_NAME=dev_postgres_db_tracker
+DB_USER=some_user
+DB_PASSWORD=superdupersecretpassword1!
+DB_HOST=jwst.domain.castle
+DB_PORT=5432
+USE_SQLITE=false
+
+# Django Configuration
+SECRET_KEY=django-insecure-r55(7n1p8aad8d!)u_&6-4@!glt!ba!o93#%gajl(^8h^r9f#a
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1,jwst.domain.castle
+
+# API Keys (optional for development)
+FEC_API_KEY=your_fec_api_key_here
+PROPUBLICA_API_KEY=your_propublica_api_key_here
+SEC_API_KEY=your_sec_api_key_here
+```
+
+### Database Configuration
+- **Primary**: PostgreSQL at `jwst.domain.castle:5432`
+- **Fallback**: SQLite (set `USE_SQLITE=true` in `.env`)
+- **Migrations**: Automatic on container startup
+- **Superuser**: Auto-created if not exists
+
 ## Data Ingestion Pipeline Configuration
 
-This document provides detailed information about the data sources, API connections, and configuration options for the Corporate Spending Tracker's data ingestion pipeline.
+### Data Sources Overview
 
-## Data Sources Overview
-
-### 1. Federal Election Commission (FEC) API
+#### 1. Federal Election Commission (FEC) API
 **Purpose**: Political contribution data from corporate PACs
 
 **API Endpoint**: `https://api.open.fec.gov/v1`
@@ -35,7 +84,7 @@ FEC_API_KEY=your_fec_api_key_here
 - Recipient information
 - Contributor details
 
-### 2. Senate Lobbying Disclosure Act (LDA) Database
+#### 2. Senate Lobbying Disclosure Act (LDA) Database
 **Purpose**: Lobbying expenditures and reports
 
 **API Endpoint**: `https://lda.senate.gov/api/v1`
@@ -59,7 +108,7 @@ FEC_API_KEY=your_fec_api_key_here
 - Specific issues lobbied
 - Lobbyist names
 
-### 3. IRS/ProPublica Nonprofit API
+#### 3. IRS/ProPublica Nonprofit API
 **Purpose**: Charitable grants and foundation data
 
 **API Endpoint**: `https://api.propublica.org/nonprofits/v1`
@@ -88,7 +137,7 @@ PROPUBLICA_API_KEY=your_propublica_api_key_here
 - Recipient categories (auto-classified)
 - Fiscal year information
 
-### 4. SEC EDGAR via SEC-API.io
+#### 4. SEC EDGAR via SEC-API.io
 **Purpose**: Corporate financial data and filings
 
 **API Endpoint**: `https://api.sec-api.io`
@@ -266,9 +315,34 @@ The system automatically categorizes grant recipients based on keywords:
 - Processing throughput
 - Error rates by source
 
+## Container Management
+
+### Startup Process
+1. **Database Connection**: Wait for PostgreSQL availability
+2. **Migrations**: Run Django migrations automatically
+3. **Superuser Creation**: Create admin user if not exists
+4. **Static Files**: Collect and serve static files
+5. **Server Start**: Launch Django development server
+
+### Health Checks
+- **Backend**: Django system check every 30 seconds
+- **Frontend**: HTTP availability check every 30 seconds
+- **Database**: Connection test during startup
+
+### Logging
+- **Backend**: Django logs to stdout/stderr
+- **Frontend**: HTTP server logs to stdout/stderr
+- **Docker**: Container logs accessible via `docker-compose logs`
+
 ## Troubleshooting
 
 ### Common Issues
+
+**Database Connection Errors**:
+```
+Error: connection to server at "jwst.domain.castle" failed
+Solution: Check database credentials in backend/.env
+```
 
 **API Key Errors**:
 ```
@@ -282,28 +356,26 @@ Error: 429 Too Many Requests
 Solution: Implement rate limiting or upgrade API plan
 ```
 
-**Network Timeouts**:
+**Container Startup Issues**:
 ```
-Error: Connection timeout
-Solution: Check network connectivity and API endpoint status
-```
-
-**Data Processing Errors**:
-```
-Error: Invalid date format
-Solution: Check data source format and update parsing logic
+Error: Container fails to start
+Solution: Check logs with docker-compose logs backend
 ```
 
 ### Debug Commands
 ```bash
-# Test individual data sources
-python manage.py test_ingestion
+# View container logs
+docker-compose logs backend
+docker-compose logs frontend
+
+# Access backend container
+docker-compose exec backend python manage.py shell
+
+# Test data ingestion
+docker-compose exec backend python manage.py test_ingestion
 
 # Check data quality
-python manage.py shell -c "from data_collection.ingestion.data_processor import DataProcessor; p = DataProcessor(); print(p.get_data_quality_report())"
-
-# Verify API connections
-python manage.py shell -c "from data_collection.ingestion.fec_ingestion import FECIngestion; f = FECIngestion(); print(f.get_committee_info('C00123456'))"
+docker-compose exec backend python manage.py shell -c "from data_collection.ingestion.data_processor import DataProcessor; p = DataProcessor(); print(p.get_data_quality_report())"
 ```
 
 ## Future Enhancements

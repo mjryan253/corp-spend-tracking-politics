@@ -1,0 +1,54 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: corp-spend-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_HOST=${DB_HOST:-jwst.domain.castle}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-dev_postgres_db_tracker}
+      - DB_USER=${DB_USER:-some_user}
+      - DB_PASSWORD=${DB_PASSWORD:-superdupersecretpassword1!}
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-r55(7n1p8aad8d!)u_&6-4@!glt!ba!o93#%gajl(^8h^r9f#a}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,jwst.domain.castle}
+      - USE_SQLITE=${USE_SQLITE:-false}
+    ports:
+      - "8000:8000"
+    networks:
+      - corp-spend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: corp-spend-frontend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "3000:3000"
+    networks:
+      - corp-spend-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  corp-spend-network:
+    driver: bridge
