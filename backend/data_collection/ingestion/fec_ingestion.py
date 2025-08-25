@@ -18,6 +18,12 @@ class FECIngestion:
             'X-API-Key': self.api_key,
             'Content-Type': 'application/json'
         }
+        
+        # Log API key status
+        if self.api_key and self.api_key != 'your_fec_api_key_here':
+            print(f"✅ FEC API key found: {self.api_key[:8]}...")
+        else:
+            print("⚠️  FEC API key not found or not configured. Using mock data.")
     
     def fetch_data(self, year: int = None, committee_id: str = None) -> List[Dict[str, Any]]:
         """
@@ -33,6 +39,12 @@ class FECIngestion:
         if not year:
             year = datetime.now().year
             
+        # Check if API key is available and properly configured
+        if not self.api_key or self.api_key == 'your_fec_api_key_here':
+            print("📊 Using mock FEC data for development/testing")
+            return self._get_mock_data(year)
+            
+        print(f"🔗 Fetching real FEC data for year {year}...")
         contributions = []
         
         # Get committee IDs for corporate PACs
@@ -48,9 +60,15 @@ class FECIngestion:
                 )
                 contributions.extend(committee_contributions)
             except Exception as e:
-                print(f"Error fetching data for committee {committee_id}: {e}")
+                print(f"❌ Error fetching data for committee {committee_id}: {e}")
                 continue
         
+        # If no real data was fetched, return mock data
+        if not contributions:
+            print("⚠️  No real FEC data fetched. Falling back to mock data.")
+            return self._get_mock_data(year)
+        
+        print(f"✅ Successfully fetched {len(contributions)} FEC records")
         return contributions
     
     def _get_corporate_pac_ids(self) -> List[str]:
@@ -146,3 +164,44 @@ class FECIngestion:
         except requests.RequestException as e:
             print(f"Error fetching committee info for {committee_id}: {e}")
             return {}
+
+    def _get_mock_data(self, year: int) -> List[Dict[str, Any]]:
+        """Return mock FEC data for development/testing."""
+        return [
+            {
+                'committee_id': 'C00123456',
+                'committee_name': 'Apple Inc. PAC',
+                'recipient_name': 'Sen. John Smith',
+                'recipient_party': 'Democratic',
+                'amount': Decimal('5000'),
+                'date': date(year, 1, 15),
+                'election_cycle': str(year),
+                'contributor_name': 'Apple Inc.',
+                'contributor_employer': 'Apple Inc.',
+                'contributor_occupation': 'Executive',
+            },
+            {
+                'committee_id': 'C00234567',
+                'committee_name': 'Microsoft PAC',
+                'recipient_name': 'Rep. Jane Doe',
+                'recipient_party': 'Republican',
+                'amount': Decimal('3500'),
+                'date': date(year, 2, 20),
+                'election_cycle': str(year),
+                'contributor_name': 'Microsoft Corporation',
+                'contributor_employer': 'Microsoft Corporation',
+                'contributor_occupation': 'Executive',
+            },
+            {
+                'committee_id': 'C00345678',
+                'committee_name': 'Alphabet Inc. PAC',
+                'recipient_name': 'Sen. Bob Johnson',
+                'recipient_party': 'Democratic',
+                'amount': Decimal('4500'),
+                'date': date(year, 3, 10),
+                'election_cycle': str(year),
+                'contributor_name': 'Alphabet Inc.',
+                'contributor_employer': 'Alphabet Inc.',
+                'contributor_occupation': 'Executive',
+            }
+        ]

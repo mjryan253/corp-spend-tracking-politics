@@ -19,6 +19,12 @@ class IRSIngestion:
             'Content-Type': 'application/json'
         }
         
+        # Log API key status
+        if self.api_key and self.api_key != 'your_propublica_api_key_here':
+            print(f"✅ ProPublica API key found: {self.api_key[:8]}...")
+        else:
+            print("⚠️  ProPublica API key not found or not configured. Using mock data.")
+        
         # Classification keywords for different categories
         self.category_keywords = {
             'Religious': [
@@ -69,6 +75,12 @@ class IRSIngestion:
         if not year:
             year = datetime.now().year
             
+        # Check if API key is available and properly configured
+        if not self.api_key or self.api_key == 'your_propublica_api_key_here':
+            print("📊 Using mock ProPublica data for development/testing")
+            return self._get_mock_data(year, ein)
+            
+        print(f"🔗 Fetching real ProPublica data for year {year}...")
         grants = []
         
         # Get foundation EINs for corporate foundations
@@ -82,9 +94,15 @@ class IRSIngestion:
                 foundation_grants = self._fetch_foundation_grants(foundation_ein, year)
                 grants.extend(foundation_grants)
             except Exception as e:
-                print(f"Error fetching grants for foundation {foundation_ein}: {e}")
+                print(f"❌ Error fetching grants for foundation {foundation_ein}: {e}")
                 continue
         
+        # If no real data was fetched, return mock data
+        if not grants:
+            print("⚠️  No real ProPublica data fetched. Falling back to mock data.")
+            return self._get_mock_data(year, ein)
+        
+        print(f"✅ Successfully fetched {len(grants)} ProPublica records")
         return grants
     
     def _get_corporate_foundation_eins(self) -> List[str]:
@@ -236,3 +254,60 @@ class IRSIngestion:
             'category_breakdown': category_counts,
             'average_grant': total_amount / len(grants) if grants else 0
         }
+    
+    def _get_mock_data(self, year: int, ein: str = None) -> List[Dict[str, Any]]:
+        """Return mock charitable grant data for development/testing."""
+        return [
+            {
+                'foundation_ein': '13-3398765',
+                'recipient_name': 'American Red Cross',
+                'recipient_ein': '53-0196605',
+                'amount': Decimal('1000000'),
+                'fiscal_year': year,
+                'grant_description': 'Disaster relief and emergency response',
+                'recipient_category': 'Humanitarian',
+                'grant_date': datetime(year, 6, 15),
+                'recipient_address': '431 18th St NW',
+                'recipient_city': 'Washington',
+                'recipient_state': 'DC',
+            },
+            {
+                'foundation_ein': '91-1144442',
+                'recipient_name': 'University of Washington Foundation',
+                'recipient_ein': '91-1077680',
+                'amount': Decimal('500000'),
+                'fiscal_year': year,
+                'grant_description': 'Computer science education and research',
+                'recipient_category': 'Education',
+                'grant_date': datetime(year, 8, 20),
+                'recipient_address': '4333 Brooklyn Ave NE',
+                'recipient_city': 'Seattle',
+                'recipient_state': 'WA',
+            },
+            {
+                'foundation_ein': '94-3068481',
+                'recipient_name': 'St. Mary\'s Catholic Church',
+                'recipient_ein': '94-3068481',
+                'amount': Decimal('250000'),
+                'fiscal_year': year,
+                'grant_description': 'Community outreach and youth programs',
+                'recipient_category': 'Religious',
+                'grant_date': datetime(year, 9, 10),
+                'recipient_address': '219 8th Ave S',
+                'recipient_city': 'Seattle',
+                'recipient_state': 'WA',
+            },
+            {
+                'foundation_ein': '13-3398765',
+                'recipient_name': 'Stanford University',
+                'recipient_ein': '94-1156365',
+                'amount': Decimal('750000'),
+                'fiscal_year': year,
+                'grant_description': 'Technology innovation and research',
+                'recipient_category': 'Education',
+                'grant_date': datetime(year, 10, 5),
+                'recipient_address': '450 Serra Mall',
+                'recipient_city': 'Stanford',
+                'recipient_state': 'CA',
+            }
+        ]

@@ -4,37 +4,50 @@ from data_collection.ingestion.lobbying_ingestion import LobbyingIngestion
 from data_collection.ingestion.irs_ingestion import IRSIngestion
 from data_collection.ingestion.sec_ingestion import SECIngestion
 from data_collection.ingestion.data_processor import DataProcessor
+import os
 
 
 class Command(BaseCommand):
     help = 'Test the data ingestion pipeline with mock data'
 
     def handle(self, *args, **options):
-        self.stdout.write('Testing data ingestion pipeline...')
+        self.stdout.write('🧪 Testing data ingestion pipeline...')
+        self.stdout.write('=' * 60)
+        
+        # Check API key status
+        self.stdout.write('\n📋 API Key Status:')
+        fec_key = os.getenv('FEC_API_KEY', '')
+        propublica_key = os.getenv('PROPUBLICA_API_KEY', '')
+        sec_key = os.getenv('SEC_API_KEY', '')
+        
+        self.stdout.write(f"   FEC API: {'✅ Configured' if fec_key and fec_key != 'your_fec_api_key_here' else '⚠️  Not configured'}")
+        self.stdout.write(f"   ProPublica API: {'✅ Configured' if propublica_key and propublica_key != 'your_propublica_api_key_here' else '⚠️  Not configured'}")
+        self.stdout.write(f"   SEC-API.io: {'✅ Configured' if sec_key and sec_key != 'your_sec_api_key_here' else '⚠️  Not configured'}")
+        self.stdout.write(f"   Senate LDA: ✅ Public data (no key required)")
         
         # Test FEC ingestion
         self.stdout.write('\n1. Testing FEC Ingestion...')
         fec_ingestion = FECIngestion()
         fec_data = fec_ingestion.fetch_data(year=2024)
-        self.stdout.write(f'   FEC: Retrieved {len(fec_data)} records (mock data)')
+        self.stdout.write(f'   📊 FEC: Retrieved {len(fec_data)} records')
         
         # Test Lobbying ingestion
         self.stdout.write('\n2. Testing Lobbying Ingestion...')
         lobbying_ingestion = LobbyingIngestion()
         lobbying_data = lobbying_ingestion.fetch_data(year=2024)
-        self.stdout.write(f'   Lobbying: Retrieved {len(lobbying_data)} records (mock data)')
+        self.stdout.write(f'   📊 Lobbying: Retrieved {len(lobbying_data)} records')
         
         # Test IRS ingestion
         self.stdout.write('\n3. Testing IRS Ingestion...')
         irs_ingestion = IRSIngestion()
         irs_data = irs_ingestion.fetch_data(year=2023)
-        self.stdout.write(f'   IRS: Retrieved {len(irs_data)} records (mock data)')
+        self.stdout.write(f'   📊 IRS: Retrieved {len(irs_data)} records')
         
         # Test SEC ingestion
         self.stdout.write('\n4. Testing SEC Ingestion...')
         sec_ingestion = SECIngestion()
         sec_data = sec_ingestion.fetch_data(year=2023)
-        self.stdout.write(f'   SEC: Retrieved {len(sec_data)} records (mock data)')
+        self.stdout.write(f'   📊 SEC: Retrieved {len(sec_data)} records')
         
         # Test data processor
         self.stdout.write('\n5. Testing Data Processor...')
@@ -73,7 +86,14 @@ class Command(BaseCommand):
             self.style.SUCCESS('\n✅ Data ingestion pipeline test completed successfully!')
         )
         
-        self.stdout.write('\nNote: This test uses mock data. For real data ingestion:')
-        self.stdout.write('1. Set up API keys in your .env file')
-        self.stdout.write('2. Run: python manage.py ingest_data --dry-run')
-        self.stdout.write('3. Run: python manage.py ingest_data')
+        # Provide next steps
+        self.stdout.write('\n📝 Next Steps:')
+        self.stdout.write('1. To use real data, add API keys to your .env file:')
+        self.stdout.write('   - FEC_API_KEY=your_key_here')
+        self.stdout.write('   - PROPUBLICA_API_KEY=your_key_here')
+        self.stdout.write('   - SEC_API_KEY=your_key_here')
+        self.stdout.write('2. Run: python manage.py create_sample_data')
+        self.stdout.write('3. Run: python manage.py ingest_data --dry-run')
+        self.stdout.write('4. Run: python manage.py ingest_data')
+        
+        self.stdout.write('\n💡 Note: The application works with sample data even without API keys!')

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Spending Tracker - Dark Mode</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Frontend Logger -->
+    <script src="logger.js"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-down {
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dark mode toggle switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #374151;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #3B82F6;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Custom scrollbar for dark mode */
+        .dark-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .dark-scrollbar::-webkit-scrollbar-track {
+            background: #1F2937;
+        }
+
+        .dark-scrollbar::-webkit-scrollbar-thumb {
+            background: #4B5563;
+            border-radius: 4px;
+        }
+
+        .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6B7280;
+        }
+    </style>
+</head>
+<body x-data="mainApp()" class="bg-gray-900 text-gray-100 min-h-screen transition-colors duration-200">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-blue-400">Corporate Spending Tracker</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button @click="setActiveTab('search')" 
+                            :class="activeTab === 'search' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'"
+                            class="px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        🔍 Search
+                    </button>
+                    <button @click="setActiveTab('dashboard')" 
+                            :class="activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'"
+                            class="px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        📊 Dashboard
+                    </button>
+                    <button @click="setActiveTab('analytics')" 
+                            :class="activeTab === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'"
+                            class="px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        📈 Analytics
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Search Tab -->
+        <div x-show="activeTab === 'search'" x-cloak class="fade-in">
+            <div x-data="searchInterface()" class="space-y-6">
+                <!-- Search Header -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-2">🔍 Search Companies</h2>
+                            <p class="text-gray-400">Search and filter corporate spending data across lobbying, political contributions, and charitable grants.</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-400">Advanced Search</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" x-model="showAdvancedFilters" @change="searchCompanies()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Input -->
+                    <div class="flex gap-4 mb-6">
+                        <div class="flex-1 relative">
+                            <input 
+                                x-model="searchQuery" 
+                                @input.debounce.300ms="searchCompanies()"
+                                type="text" 
+                                placeholder="Search companies by name, ticker, or CIK..."
+                                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+                            >
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <button @click="loadAllCompanies()" 
+                                class="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Load All
+                        </button>
+                    </div>
+
+                    <!-- Advanced Filters -->
+                    <div x-show="showAdvancedFilters" x-cloak class="slide-down border-t border-gray-700 pt-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Advanced Filters</h3>
+                        
+                        <!-- Spending Range Filters -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">💰 Min Spending ($)</label>
+                                <input 
+                                    x-model.number="filters.minSpending" 
+                                    @input.debounce.500ms="searchCompanies()"
+                                    type="number" 
+                                    placeholder="0"
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">💰 Max Spending ($)</label>
+                                <input 
+                                    x-model.number="filters.maxSpending" 
+                                    @input.debounce.500ms="searchCompanies()"
+                                    type="number" 
+                                    placeholder="1000000"
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">📅 Year Range</label>
+                                <select 
+                                    x-model="filters.yearRange" 
+                                    @change="searchCompanies()"
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                                >
+                                    <option value="">All Years</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                    <option value="2022">2022</option>
+                                    <option value="2021">2021</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">🏢 Company Type</label>
+                                <select 
+                                    x-model="filters.companyType" 
+                                    @change="searchCompanies()"
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                                >
+                                    <option value="">All Types</option>
+                                    <option value="tech">Technology</option>
+                                    <option value="finance">Finance</option>
+                                    <option value="healthcare">Healthcare</option>
+                                    <option value="energy">Energy</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Data Availability Toggles -->
+                        <div class="mb-6">
+                            <h4 class="text-md font-medium text-gray-300 mb-3">📊 Data Availability</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" x-model="filters.hasLobbying" @change="searchCompanies()" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                                    <span class="text-gray-300">🏛️ Lobbying Data</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" x-model="filters.hasCharitable" @change="searchCompanies()" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                                    <span class="text-gray-300">🤝 Charitable Data</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" x-model="filters.hasPolitical" @change="searchCompanies()" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                                    <span class="text-gray-300">🗳️ Political Data</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Clear Filters -->
+                        <div class="flex justify-end">
+                            <button @click="clearFilters()" 
+                                    class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                                🗑️ Clear All Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div x-show="loading" x-cloak class="text-center py-12">
+                    <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-gray-300">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Searching...
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div x-show="!loading && companies.length > 0" x-cloak class="fade-in">
+                    <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+                        <div class="px-6 py-4 border-b border-gray-700">
+                            <h3 class="text-lg font-medium text-white">
+                                📊 <span x-text="companies.length"></span> Companies Found
+                            </h3>
+                        </div>
+                        <div class="divide-y divide-gray-700">
+                            <template x-for="company in companies" :key="company.id">
+                                <div class="p-6 hover:bg-gray-750 transition-colors cursor-pointer" @click="viewCompany(company)">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <h4 class="text-lg font-medium text-white" x-text="company.name"></h4>
+                                            <div class="mt-1 flex items-center space-x-4 text-sm text-gray-400">
+                                                <span x-text="company.ticker || 'No ticker'"></span>
+                                                <span x-text="company.cik || 'No CIK'"></span>
+                                                <span x-text="company.headquarters_location || 'No location'"></span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Results -->
+                <div x-show="!loading && companies.length === 0 && searchQuery.length > 0" x-cloak class="text-center py-12">
+                    <div class="text-gray-400">
+                        <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-300">No companies found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Try adjusting your search criteria or filters.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div x-show="activeTab === 'dashboard'" x-cloak class="fade-in">
+            <div class="text-center py-12">
+                <h2 class="text-2xl font-bold text-white mb-4">📊 Dashboard</h2>
+                <p class="text-gray-400">Dashboard coming soon...</p>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div x-show="activeTab === 'analytics'" x-cloak class="fade-in">
+            <div class="text-center py-12">
+                <h2 class="text-2xl font-bold text-white mb-4">📈 Analytics</h2>
+                <p class="text-gray-400">Analytics coming soon...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Company Detail Modal -->
+    <div x-show="selectedCompany" x-cloak 
+         class="fixed inset-0 bg-black bg-opacity-75 overflow-y-auto h-full w-full z-50"
+         @click.self="selectedCompany = null">
+        <div class="relative top-20 mx-auto p-5 border border-gray-700 w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-gray-800">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-white" x-text="selectedCompany?.name"></h3>
+                    <button @click="selectedCompany = null" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div x-show="selectedCompany" x-data="companyDetail()" x-init="loadCompanyData(selectedCompany.id)">
+                    <!-- Loading -->
+                    <div x-show="loading" class="text-center py-8">
+                        <div class="animate-spin mx-auto h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                    </div>
+                    
+                    <!-- Company Data -->
+                    <div x-show="!loading && companyData" class="space-y-6">
+                        <!-- Basic Info -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-300">📈 Ticker</h4>
+                                <p class="text-white" x-text="companyData.company?.ticker || 'N/A'"></p>
+                            </div>
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-300">🏢 CIK</h4>
+                                <p class="text-white" x-text="companyData.company?.cik || 'N/A'"></p>
+                            </div>
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-300">📍 Location</h4>
+                                <p class="text-white" x-text="selectedCompany?.headquarters_location || 'N/A'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Spending Summary -->
+                        <div class="bg-blue-900 bg-opacity-50 p-6 rounded-lg border border-blue-700">
+                            <h4 class="text-lg font-medium text-white mb-4">💰 Spending Summary</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-blue-400" x-text="formatCurrency(companyData.spending_totals?.lobbying || 0)"></div>
+                                    <div class="text-sm text-gray-300">🏛️ Lobbying</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-green-400" x-text="formatCurrency(companyData.spending_totals?.charitable || 0)"></div>
+                                    <div class="text-sm text-gray-300">🤝 Charitable</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-purple-400" x-text="formatCurrency(companyData.spending_totals?.political || 0)"></div>
+                                    <div class="text-sm text-gray-300">🗳️ Political</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-white" x-text="formatCurrency(companyData.spending_totals?.total || 0)"></div>
+                                    <div class="text-sm text-gray-300">📊 Total</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charitable Breakdown -->
+                        <div x-show="companyData.charitable_breakdown?.length > 0" class="bg-green-900 bg-opacity-50 p-6 rounded-lg border border-green-700">
+                            <h4 class="text-lg font-medium text-white mb-4">🤝 Charitable Grants by Category</h4>
+                            <div class="space-y-2">
+                                <template x-for="category in companyData.charitable_breakdown" :key="category.recipient_category">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-300" x-text="category.recipient_category"></span>
+                                        <span class="font-medium text-green-400" x-text="formatCurrency(category.total)"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Main app state
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('mainApp', () => ({
+                activeTab: 'search',
+                selectedCompany: null,
+                
+                init() {
+                    frontendLogger.info('Application initialized');
+                },
+                
+                setActiveTab(tab) {
+                    const oldTab = this.activeTab;
+                    this.activeTab = tab;
+                    frontendLogger.logUserAction('Tab changed', {
+                        from: oldTab,
+                        to: tab
+                    });
+                }
+            }))
+        })
+
+        // Search interface component
+        function searchInterface() {
+            return {
+                searchQuery: '',
+                companies: [],
+                loading: false,
+                showAdvancedFilters: false,
+                filters: {
+                    minSpending: null,
+                    maxSpending: null,
+                    yearRange: '',
+                    companyType: '',
+                    hasLobbying: false,
+                    hasCharitable: false,
+                    hasPolitical: false
+                },
+
+                async searchCompanies() {
+                    await frontendLogger.info('Search function called', {
+                        searchQuery: this.searchQuery,
+                        filters: this.filters,
+                        hasActiveFilters: this.hasActiveFilters()
+                    });
+
+                    if (this.searchQuery.length < 1 && !this.hasActiveFilters()) {
+                        await frontendLogger.debug('Search skipped - no query and no filters');
+                        this.companies = [];
+                        return;
+                    }
+
+                    this.loading = true;
+                    await frontendLogger.info('Starting search request', {
+                        searchQuery: this.searchQuery,
+                        filters: this.filters
+                    });
+
+                    try {
+                        const params = new URLSearchParams();
+                        
+                        if (this.searchQuery) {
+                            params.append('q', this.searchQuery);
+                        }
+                        
+                        if (this.filters.minSpending) {
+                            params.append('min_spending', this.filters.minSpending);
+                        }
+                        
+                        if (this.filters.maxSpending) {
+                            params.append('max_spending', this.filters.maxSpending);
+                        }
+                        
+                        if (this.filters.hasLobbying) {
+                            params.append('has_lobbying', 'true');
+                        }
+                        
+                        if (this.filters.hasCharitable) {
+                            params.append('has_charitable', 'true');
+                        }
+
+                        if (this.filters.hasPolitical) {
+                            params.append('has_political', 'true');
+                        }
+
+                        const url = `http://127.0.0.1:8000/api/companies/search/?${params}`;
+                        await frontendLogger.debug('Making API request', { url, params: Object.fromEntries(params) });
+
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        await frontendLogger.logApiRequest(url, 'GET', Object.fromEntries(params), {
+                            status: response.status,
+                            statusText: response.statusText,
+                            data: data
+                        });
+
+                        console.log('Search response:', data);
+                        this.companies = data.results || data;
+                        console.log('Companies array:', this.companies);
+                        
+                        await frontendLogger.info('Search completed successfully', {
+                            companiesFound: this.companies.length,
+                            searchQuery: this.searchQuery
+                        });
+                    } catch (error) {
+                        await frontendLogger.error('Search failed', {
+                            error: error.message,
+                            stack: error.stack,
+                            searchQuery: this.searchQuery,
+                            filters: this.filters
+                        });
+                        console.error('Search failed:', error);
+                        this.companies = [];
+                    } finally {
+                        this.loading = false;
+                        await frontendLogger.debug('Search loading state set to false');
+                    }
+                },
+
+                hasActiveFilters() {
+                    return this.filters.minSpending || 
+                           this.filters.maxSpending || 
+                           this.filters.yearRange ||
+                           this.filters.companyType ||
+                           this.filters.hasLobbying || 
+                           this.filters.hasCharitable ||
+                           this.filters.hasPolitical;
+                },
+
+                clearFilters() {
+                    this.filters = {
+                        minSpending: null,
+                        maxSpending: null,
+                        yearRange: '',
+                        companyType: '',
+                        hasLobbying: false,
+                        hasCharitable: false,
+                        hasPolitical: false
+                    };
+                    this.searchCompanies();
+                },
+
+                viewCompany(company) {
+                    frontendLogger.logUserAction('Company selected', {
+                        companyId: company.id,
+                        companyName: company.name,
+                        companyTicker: company.ticker
+                    });
+                    this.$parent.selectedCompany = company;
+                },
+
+                async loadAllCompanies() {
+                    await frontendLogger.info('Load All Companies button clicked');
+                    this.loading = true;
+                    try {
+                        const url = 'http://127.0.0.1:8000/api/companies/';
+                        await frontendLogger.debug('Making API request to load all companies', { url });
+
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        await frontendLogger.logApiRequest(url, 'GET', {}, {
+                            status: response.status,
+                            statusText: response.statusText,
+                            data: data
+                        });
+
+                        console.log('All companies response:', data);
+                        this.companies = data.results || data;
+                        console.log('All companies array:', this.companies);
+                        
+                        await frontendLogger.info('All companies loaded successfully', {
+                            companiesFound: this.companies.length
+                        });
+                    } catch (error) {
+                        await frontendLogger.error('Failed to load all companies', {
+                            error: error.message,
+                            stack: error.stack
+                        });
+                        console.error('Failed to load all companies:', error);
+                        this.companies = [];
+                    } finally {
+                        this.loading = false;
+                        await frontendLogger.debug('Load all companies loading state set to false');
+                    }
+                }
+            }
+        }
+
+        // Company detail component
+        function companyDetail() {
+            return {
+                loading: false,
+                companyData: null,
+
+                async loadCompanyData(companyId) {
+                    frontendLogger.info('Loading company detail data', { companyId });
+                    this.loading = true;
+                    try {
+                        const url = `http://127.0.0.1:8000/api/companies/${companyId}/spending_summary/`;
+                        await frontendLogger.debug('Making API request for company details', { url });
+
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        await frontendLogger.logApiRequest(url, 'GET', { companyId }, {
+                            status: response.status,
+                            statusText: response.statusText,
+                            data: data
+                        });
+
+                        this.companyData = data;
+                        frontendLogger.info('Company detail data loaded successfully', { companyId });
+                    } catch (error) {
+                        await frontendLogger.error('Failed to load company data', {
+                            companyId,
+                            error: error.message,
+                            stack: error.stack
+                        });
+                        console.error('Failed to load company data:', error);
+                    } finally {
+                        this.loading = false;
+                        frontendLogger.debug('Company detail loading state set to false');
+                    }
+                },
+
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(amount);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
