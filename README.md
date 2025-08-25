@@ -28,8 +28,8 @@ The easiest and recommended way to run this application is with Docker.
 
 1.  **Clone the repository**:
 
-         ```bash
-     git clone <repository-url>
+     ```
+     git clone https://github.com/mjryan253/corp-spend-tracking-politics
      cd corp-spend-tracking-politics
      ```
 
