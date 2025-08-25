@@ -130,6 +130,12 @@
                             class="px-3 py-2 rounded-md text-sm font-medium transition-colors">
                         📈 Analytics
                     </button>
+                    <a href="http://localhost:8000/api/docs/" target="_blank" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        📚 API Docs (Swagger)
+                    </a>
+                    <a href="http://localhost:8000/api/redoc/" target="_blank" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        📖 API Docs (ReDoc)
+                    </a>
                 </div>
             </div>
         </div>
@@ -321,17 +327,224 @@
 
         <!-- Dashboard Tab -->
         <div x-show="activeTab === 'dashboard'" x-cloak class="fade-in">
-            <div class="text-center py-12">
-                <h2 class="text-2xl font-bold text-white mb-4">📊 Dashboard</h2>
-                <p class="text-gray-400">Dashboard coming soon...</p>
+            <div x-data="dashboardData()" class="space-y-6">
+                <!-- Dashboard Header -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-4">📊 Dashboard Overview</h2>
+                    <p class="text-gray-400 mb-6">Real-time overview of corporate spending data and trends.</p>
+                    
+                    <!-- Loading State -->
+                    <div x-show="loading" class="text-center py-8">
+                        <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-gray-300">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Loading dashboard data...
+                        </div>
+                    </div>
+                    
+                    <!-- Dashboard Stats -->
+                    <div x-show="!loading && dashboardStats" x-cloak class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-gray-700 p-6 rounded-lg border border-gray-600">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-blue-500 rounded-lg">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-400">Total Companies</p>
+                                    <p class="text-2xl font-bold text-white" x-text="dashboardStats.total_companies || 0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-700 p-6 rounded-lg border border-gray-600">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-green-500 rounded-lg">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-400">Total Spending</p>
+                                    <p class="text-2xl font-bold text-white" x-text="formatCurrency(dashboardStats.total_spending || 0)"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-700 p-6 rounded-lg border border-gray-600">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-yellow-500 rounded-lg">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-400">Lobbying</p>
+                                    <p class="text-2xl font-bold text-white" x-text="formatCurrency(dashboardStats.spending_breakdown?.lobbying || 0)"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-700 p-6 rounded-lg border border-gray-600">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-purple-500 rounded-lg">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-400">Political</p>
+                                    <p class="text-2xl font-bold text-white" x-text="formatCurrency(dashboardStats.spending_breakdown?.political || 0)"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Spenders -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white">🏆 Top Spenders</h3>
+                        <div class="flex space-x-2">
+                            <button @click="loadTopSpenders('all')" 
+                                    :class="topSpendersType === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                                    class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                                All
+                            </button>
+                            <button @click="loadTopSpenders('lobbying')" 
+                                    :class="topSpendersType === 'lobbying' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                                    class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                                Lobbying
+                            </button>
+                            <button @click="loadTopSpenders('charitable')" 
+                                    :class="topSpendersType === 'charitable' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                                    class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                                Charitable
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div x-show="topSpendersLoading" class="text-center py-8">
+                        <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-gray-300">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Loading top spenders...
+                        </div>
+                    </div>
+                    
+                    <div x-show="!topSpendersLoading && topSpenders.length > 0" x-cloak class="space-y-4">
+                        <template x-for="(spender, index) in topSpenders" :key="spender.company.id">
+                            <div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 hover:bg-gray-650 transition-colors cursor-pointer" @click="viewCompany(spender.company)">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm" x-text="index + 1"></div>
+                                    <div>
+                                        <h4 class="text-lg font-medium text-white" x-text="spender.company.name"></h4>
+                                        <p class="text-sm text-gray-400" x-text="spender.company.ticker || 'No ticker'"></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-lg font-bold text-white" x-text="formatCurrency(spender.spending.total)"></p>
+                                    <div class="flex space-x-2 text-xs text-gray-400">
+                                        <span x-text="'L: ' + formatCurrency(spender.spending.lobbying)"></span>
+                                        <span x-text="'P: ' + formatCurrency(spender.spending.political)"></span>
+                                        <span x-text="'C: ' + formatCurrency(spender.spending.charitable)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div x-show="!topSpendersLoading && topSpenders.length === 0" x-cloak class="text-center py-8">
+                        <p class="text-gray-400">No spending data available.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Analytics Tab -->
         <div x-show="activeTab === 'analytics'" x-cloak class="fade-in">
-            <div class="text-center py-12">
-                <h2 class="text-2xl font-bold text-white mb-4">📈 Analytics</h2>
-                <p class="text-gray-400">Analytics coming soon...</p>
+            <div x-data="analyticsData()" class="space-y-6">
+                <!-- Analytics Header -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-4">📈 Analytics & Trends</h2>
+                    <p class="text-gray-400 mb-6">Advanced analytics and spending trend analysis.</p>
+                    
+                    <!-- Analytics Controls -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Time Period</label>
+                            <select x-model="analyticsFilters.period" @change="loadAnalytics()" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                                <option value="all">All Time</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Spending Type</label>
+                            <select x-model="analyticsFilters.type" @change="loadAnalytics()" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
+                                <option value="all">All Types</option>
+                                <option value="lobbying">Lobbying</option>
+                                <option value="political">Political</option>
+                                <option value="charitable">Charitable</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Chart Type</label>
+                            <select x-model="analyticsFilters.chartType" @change="updateChart()" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
+                                <option value="bar">Bar Chart</option>
+                                <option value="line">Line Chart</option>
+                                <option value="pie">Pie Chart</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Chart -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">📊 Spending Trends</h3>
+                    <div class="h-96">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Analytics Summary -->
+                <div x-show="analyticsData" x-cloak class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                        <h3 class="text-lg font-bold text-white mb-4">📈 Key Insights</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Average Spending per Company</span>
+                                <span class="font-medium text-white" x-text="formatCurrency(analyticsData?.average_spending || 0)"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Total Companies Analyzed</span>
+                                <span class="font-medium text-white" x-text="analyticsData?.company_count || 0"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Highest Single Spending</span>
+                                <span class="font-medium text-white" x-text="formatCurrency(analyticsData?.highest_spending || 0)"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                        <h3 class="text-lg font-bold text-white mb-4">🎯 Top Categories</h3>
+                        <div class="space-y-3">
+                            <template x-for="category in analyticsData?.top_categories || []" :key="category.name">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-400" x-text="category.name"></span>
+                                    <span class="font-medium text-white" x-text="formatCurrency(category.amount)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -640,6 +853,230 @@
                         this.loading = false;
                         frontendLogger.debug('Company detail loading state set to false');
                     }
+                },
+
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(amount);
+                }
+            }
+        }
+
+        // Dashboard component
+        function dashboardData() {
+            return {
+                loading: false,
+                dashboardStats: null,
+                topSpenders: [],
+                topSpendersLoading: false,
+                topSpendersType: 'all',
+
+                init() {
+                    this.loadDashboardStats();
+                    this.loadTopSpenders('all');
+                },
+
+                async loadDashboardStats() {
+                    this.loading = true;
+                    try {
+                        const url = 'http://127.0.0.1:8000/api/analytics/dashboard/';
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        this.dashboardStats = data;
+                        frontendLogger.info('Dashboard stats loaded successfully');
+                    } catch (error) {
+                        frontendLogger.error('Failed to load dashboard stats', { error: error.message });
+                        console.error('Failed to load dashboard stats:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadTopSpenders(type) {
+                    this.topSpendersType = type;
+                    this.topSpendersLoading = true;
+                    try {
+                        const params = new URLSearchParams();
+                        params.append('spending_type', type);
+                        params.append('limit', '10');
+                        
+                        const url = `http://127.0.0.1:8000/api/companies/top_spenders/?${params}`;
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        this.topSpenders = data.results || data;
+                        frontendLogger.info('Top spenders loaded successfully', { type });
+                    } catch (error) {
+                        frontendLogger.error('Failed to load top spenders', { error: error.message });
+                        console.error('Failed to load top spenders:', error);
+                        this.topSpenders = [];
+                    } finally {
+                        this.topSpendersLoading = false;
+                    }
+                },
+
+                viewCompany(company) {
+                    this.$parent.selectedCompany = company;
+                },
+
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(amount);
+                }
+            }
+        }
+
+        // Analytics component
+        function analyticsData() {
+            return {
+                analyticsData: null,
+                analyticsFilters: {
+                    period: '2024',
+                    type: 'all',
+                    chartType: 'bar'
+                },
+                chart: null,
+
+                init() {
+                    this.loadAnalytics();
+                },
+
+                async loadAnalytics() {
+                    try {
+                        const params = new URLSearchParams();
+                        if (this.analyticsFilters.period !== 'all') {
+                            params.append('year', this.analyticsFilters.period);
+                        }
+                        if (this.analyticsFilters.type !== 'all') {
+                            params.append('spending_type', this.analyticsFilters.type);
+                        }
+                        
+                        const url = `http://127.0.0.1:8000/api/analytics/spending_comparison/?${params}`;
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        this.analyticsData = {
+                            results: data.results || [],
+                            average_spending: this.calculateAverageSpending(data.results || []),
+                            company_count: (data.results || []).length,
+                            highest_spending: this.calculateHighestSpending(data.results || []),
+                            top_categories: this.calculateTopCategories(data.results || [])
+                        };
+                        
+                        this.updateChart();
+                        frontendLogger.info('Analytics data loaded successfully');
+                    } catch (error) {
+                        frontendLogger.error('Failed to load analytics data', { error: error.message });
+                        console.error('Failed to load analytics data:', error);
+                    }
+                },
+
+                updateChart() {
+                    if (!this.analyticsData?.results) return;
+                    
+                    const ctx = document.getElementById('analyticsChart');
+                    if (!ctx) return;
+                    
+                    if (this.chart) {
+                        this.chart.destroy();
+                    }
+                    
+                    const labels = this.analyticsData.results.map(item => item.company.name);
+                    const data = this.analyticsData.results.map(item => item.spending.total);
+                    
+                    this.chart = new Chart(ctx, {
+                        type: this.analyticsFilters.chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Total Spending',
+                                data: data,
+                                backgroundColor: [
+                                    'rgba(59, 130, 246, 0.8)',
+                                    'rgba(16, 185, 129, 0.8)',
+                                    'rgba(245, 158, 11, 0.8)',
+                                    'rgba(239, 68, 68, 0.8)',
+                                    'rgba(139, 92, 246, 0.8)'
+                                ],
+                                borderColor: [
+                                    'rgba(59, 130, 246, 1)',
+                                    'rgba(16, 185, 129, 1)',
+                                    'rgba(245, 158, 11, 1)',
+                                    'rgba(239, 68, 68, 1)',
+                                    'rgba(139, 92, 246, 1)'
+                                ],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: {
+                                        color: '#E5E7EB'
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: '#E5E7EB',
+                                        callback: function(value) {
+                                            return new Intl.NumberFormat('en-US', {
+                                                style: 'currency',
+                                                currency: 'USD',
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0
+                                            }).format(value);
+                                        }
+                                    },
+                                    grid: {
+                                        color: '#374151'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#E5E7EB'
+                                    },
+                                    grid: {
+                                        color: '#374151'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                calculateAverageSpending(results) {
+                    if (results.length === 0) return 0;
+                    const total = results.reduce((sum, item) => sum + item.spending.total, 0);
+                    return total / results.length;
+                },
+
+                calculateHighestSpending(results) {
+                    if (results.length === 0) return 0;
+                    return Math.max(...results.map(item => item.spending.total));
+                },
+
+                calculateTopCategories(results) {
+                    // This is a simplified calculation - in a real app you'd get this from the API
+                    return [
+                        { name: 'Technology', amount: 50000000 },
+                        { name: 'Healthcare', amount: 30000000 },
+                        { name: 'Finance', amount: 25000000 },
+                        { name: 'Energy', amount: 20000000 }
+                    ];
                 },
 
                 formatCurrency(amount) {

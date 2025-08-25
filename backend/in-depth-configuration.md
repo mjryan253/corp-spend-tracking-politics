@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides detailed information about the Corporate Spending Tracker's containerized architecture, data sources, API connections, and configuration options.
+This document provides detailed information about the Corporate Spending Tracker's containerized architecture, data sources, API connections, configuration options, and advanced features.
 
 ## Containerized Architecture
 
@@ -232,6 +232,76 @@ The system automatically categorizes grant recipients based on keywords:
 4. Assign first matching category
 5. Default to "Other" if no match found
 
+## Auto-Generated API Documentation
+
+### Overview
+The application uses **drf-spectacular** to automatically generate comprehensive API documentation that stays in sync with your code.
+
+### Configuration
+The documentation is configured in `settings.py`:
+
+```python
+INSTALLED_APPS = [
+    # ... other apps
+    'drf_spectacular',
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # ... other settings
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Corporate Spending Tracker API',
+    'DESCRIPTION': 'Comprehensive API for accessing corporate spending data...',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'TAGS': [
+        {'name': 'companies', 'description': 'Company management endpoints'},
+        {'name': 'analytics', 'description': 'Analytics and reporting endpoints'},
+        {'name': 'lobbying', 'description': 'Lobbying report data endpoints'},
+        {'name': 'political', 'description': 'Political contribution endpoints'},
+        {'name': 'charitable', 'description': 'Charitable grant endpoints'},
+        {'name': 'financial', 'description': 'Financial summary endpoints'},
+        {'name': 'system', 'description': 'System and logging endpoints'},
+    ],
+}
+```
+
+### URL Configuration
+Documentation endpoints are configured in `urls.py`:
+
+```python
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+
+urlpatterns = [
+    # ... other URLs
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+]
+```
+
+### Access Points
+- **Swagger UI**: http://localhost:8000/api/docs/
+- **ReDoc**: http://localhost:8000/api/redoc/
+- **Raw Schema**: http://localhost:8000/api/schema/
+
+### Management Commands
+```bash
+# Generate schema with statistics
+python manage.py generate_schema
+
+# Validate schema
+python manage.py spectacular --validate
+
+# Export for external tools
+python manage.py spectacular --file api_schema.json --format openapi-json
+python manage.py spectacular --file api_schema.yaml --format openapi
+```
+
 ## Data Quality Monitoring
 
 ### Quality Metrics Tracked
@@ -315,6 +385,25 @@ The system automatically categorizes grant recipients based on keywords:
 - Processing throughput
 - Error rates by source
 
+### Frontend Logging
+The application includes a frontend logging system:
+
+```javascript
+// Log frontend events
+fetch('/api/logs/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'INFO',
+        message: 'User performed search',
+        data: {query: 'apple', results: 5},
+        userAgent: navigator.userAgent,
+        url: window.location.href
+    })
+});
+```
+
 ## Container Management
 
 ### Startup Process
@@ -333,6 +422,34 @@ The system automatically categorizes grant recipients based on keywords:
 - **Backend**: Django logs to stdout/stderr
 - **Frontend**: HTTP server logs to stdout/stderr
 - **Docker**: Container logs accessible via `docker-compose logs`
+
+## Management Commands
+
+### Available Commands
+```bash
+# Data ingestion
+python manage.py test_ingestion          # Test ingestion pipeline
+python manage.py create_sample_data      # Create sample data
+python manage.py ingest_data             # Run full data ingestion
+
+# System management
+python manage.py wait_for_db             # Wait for database connection
+python manage.py create_superuser_if_not_exists  # Create admin user
+
+# API documentation
+python manage.py generate_schema         # Generate OpenAPI schema
+python manage.py spectacular --validate  # Validate schema
+```
+
+### Custom Commands
+The application includes several custom management commands:
+
+1. **`generate_schema`**: Generate OpenAPI schema with statistics
+2. **`wait_for_db`**: Wait for database connection before startup
+3. **`create_superuser_if_not_exists`**: Create admin user if not exists
+4. **`test_ingestion`**: Test the data ingestion pipeline
+5. **`create_sample_data`**: Populate database with sample data
+6. **`ingest_data`**: Run full data ingestion from all sources
 
 ## Troubleshooting
 
@@ -362,6 +479,12 @@ Error: Container fails to start
 Solution: Check logs with docker-compose logs backend
 ```
 
+**Schema Generation Errors**:
+```
+Error: No module named 'drf_spectacular'
+Solution: Install drf-spectacular: pip install drf-spectacular==0.27.0
+```
+
 ### Debug Commands
 ```bash
 # View container logs
@@ -376,6 +499,24 @@ docker-compose exec backend python manage.py test_ingestion
 
 # Check data quality
 docker-compose exec backend python manage.py shell -c "from data_collection.ingestion.data_processor import DataProcessor; p = DataProcessor(); print(p.get_data_quality_report())"
+
+# Validate API schema
+docker-compose exec backend python manage.py spectacular --validate
+
+# Generate schema with statistics
+docker-compose exec backend python manage.py generate_schema
+```
+
+### Performance Tuning
+```bash
+# Monitor database performance
+docker-compose exec backend python manage.py shell -c "from django.db import connection; print(connection.queries)"
+
+# Check API response times
+curl -w "@curl-format.txt" -o /dev/null -s "http://localhost:8000/api/companies/"
+
+# Monitor memory usage
+docker stats
 ```
 
 ## Future Enhancements
@@ -394,3 +535,32 @@ docker-compose exec backend python manage.py shell -c "from data_collection.inge
 - Caching layer
 - Load balancing
 - Microservices architecture
+
+### API Documentation Enhancements
+- Custom response examples
+- Request body validation
+- Authentication documentation
+- Rate limiting documentation
+- Error code documentation
+
+## External Tool Integration
+
+### Postman
+1. Export schema: `python manage.py spectacular --file schema.json --format openapi-json`
+2. Import into Postman: File → Import → API Specification
+
+### Insomnia
+1. Export schema: `python manage.py spectacular --file schema.yaml --format openapi`
+2. Import into Insomnia: Create → Import from File
+
+### Code Generation
+Generate client code from your schema:
+```bash
+# Using openapi-generator
+openapi-generator generate -i api_schema.json -g python -o ./client
+
+# Using swagger-codegen
+swagger-codegen generate -i api_schema.json -l python -o ./client
+```
+
+This comprehensive configuration guide covers all aspects of the Corporate Spending Tracker application, from basic setup to advanced features and troubleshooting.

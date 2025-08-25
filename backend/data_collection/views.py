@@ -11,6 +11,8 @@ from decimal import Decimal
 import json
 import os
 from django.conf import settings
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 from .models import Company, FinancialSummary, LobbyingReport, PoliticalContribution, CharitableGrant
 from .serializers import (
@@ -19,6 +21,32 @@ from .serializers import (
 )
 
 # Simple logging function
+@extend_schema(
+    tags=['system'],
+    summary="Log frontend events",
+    description="Receive and store frontend logging events for debugging purposes",
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'timestamp': {'type': 'string', 'format': 'date-time'},
+                'level': {'type': 'string', 'enum': ['INFO', 'WARNING', 'ERROR', 'DEBUG']},
+                'message': {'type': 'string'},
+                'data': {'type': 'object'},
+                'userAgent': {'type': 'string'},
+                'url': {'type': 'string'},
+            }
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'status': {'type': 'string', 'example': 'success'}
+            }
+        }
+    }
+)
 @api_view(['POST'])
 def log_frontend(request):
     """Simple endpoint to receive frontend logs"""
@@ -55,6 +83,32 @@ def log_frontend(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@extend_schema(
+    tags=['system'],
+    summary="Get frontend logs",
+    description="Retrieve the last 50 frontend log entries for debugging",
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'logs': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'timestamp': {'type': 'string'},
+                            'level': {'type': 'string'},
+                            'message': {'type': 'string'},
+                            'data': {'type': 'object'},
+                            'user_agent': {'type': 'string'},
+                            'url': {'type': 'string'},
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
 @api_view(['GET'])
 def get_logs(request):
     """Simple endpoint to retrieve logs"""
@@ -84,7 +138,235 @@ def get_logs(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@extend_schema(
+    tags=['analytics'],
+    summary="Get dashboard summary",
+    description="Retrieve comprehensive dashboard statistics including total companies, spending breakdown, and recent activity",
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'total_companies': {'type': 'integer', 'example': 150},
+                'total_spending': {'type': 'number', 'example': 500000000},
+                'spending_breakdown': {
+                    'type': 'object',
+                    'properties': {
+                        'lobbying': {'type': 'number', 'example': 200000000},
+                        'political': {'type': 'number', 'example': 150000000},
+                        'charitable': {'type': 'number', 'example': 150000000}
+                    }
+                },
+                'recent_activity': {
+                    'type': 'object',
+                    'properties': {
+                        'new_companies': {'type': 'integer', 'example': 5},
+                        'new_reports': {'type': 'integer', 'example': 25},
+                        'new_contributions': {'type': 'integer', 'example': 100}
+                    }
+                }
+            }
+        }
+    }
+)
+@api_view(['GET'])
+def dashboard_summary(request):
+    """Get dashboard summary statistics"""
+    try:
+        # Get total companies
+        total_companies = Company.objects.count()
+        
+        # Calculate total spending across all categories
+        lobbying_total = LobbyingReport.objects.aggregate(
+            total=Sum('amount_spent')
+        )['total'] or Decimal('0')
+        
+        charitable_total = CharitableGrant.objects.aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0')
+        
+        political_total = PoliticalContribution.objects.aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0')
+        
+        total_spending = lobbying_total + charitable_total + political_total
+        
+        # Get recent activity (last 30 days)
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        new_companies = Company.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).count()
+        
+        new_reports = LobbyingReport.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).count()
+        
+        new_contributions = PoliticalContribution.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).count()
+        
+        return Response({
+            'total_companies': total_companies,
+            'total_spending': float(total_spending),
+            'spending_breakdown': {
+                'lobbying': float(lobbying_total),
+                'political': float(political_total),
+                'charitable': float(charitable_total)
+            },
+            'recent_activity': {
+                'new_companies': new_companies,
+                'new_reports': new_reports,
+                'new_contributions': new_contributions
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
+@extend_schema(
+    tags=['analytics'],
+    summary="Get spending comparison data",
+    description="Retrieve spending comparison data for all companies, useful for analytics and visualization",
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'results': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'company': {
+                                'type': 'object',
+                                'properties': {
+                                    'id': {'type': 'integer'},
+                                    'name': {'type': 'string'},
+                                    'ticker': {'type': 'string'}
+                                }
+                            },
+                            'spending': {
+                                'type': 'object',
+                                'properties': {
+                                    'lobbying': {'type': 'number'},
+                                    'charitable': {'type': 'number'},
+                                    'political': {'type': 'number'},
+                                    'total': {'type': 'number'}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
+@api_view(['GET'])
+def spending_comparison(request):
+    """Get spending comparison data for analytics"""
+    try:
+        companies = Company.objects.all()
+        results = []
+        
+        for company in companies:
+            # Calculate spending for this company
+            lobbying_total = company.lobbying_reports.aggregate(
+                total=Sum('amount_spent')
+            )['total'] or Decimal('0')
+            
+            charitable_total = company.charitable_grants.aggregate(
+                total=Sum('amount')
+            )['total'] or Decimal('0')
+            
+            political_total = PoliticalContribution.objects.filter(
+                company_pac_id__icontains=company.name.split()[0]
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            
+            total_spending = lobbying_total + charitable_total + political_total
+            
+            if total_spending > 0:
+                results.append({
+                    'company': {
+                        'id': company.id,
+                        'name': company.name,
+                        'ticker': company.ticker,
+                    },
+                    'spending': {
+                        'lobbying': float(lobbying_total),
+                        'charitable': float(charitable_total),
+                        'political': float(political_total),
+                        'total': float(total_spending),
+                    }
+                })
+        
+        # Sort by total spending
+        results.sort(key=lambda x: x['spending']['total'], reverse=True)
+        
+        return Response({
+            'results': results
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=['companies'],
+        summary="List companies",
+        description="Retrieve a paginated list of all companies with optional filtering and search",
+        parameters=[
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, description='Search in name, ticker, or CIK'),
+            OpenApiParameter(name='ticker', type=OpenApiTypes.STR, description='Filter by ticker symbol'),
+            OpenApiParameter(name='cik', type=OpenApiTypes.STR, description='Filter by SEC CIK'),
+            OpenApiParameter(name='page', type=OpenApiTypes.INT, description='Page number for pagination'),
+            OpenApiParameter(name='page_size', type=OpenApiTypes.INT, description='Number of items per page (max: 100)'),
+        ]
+    ),
+    retrieve=extend_schema(
+        tags=['companies'],
+        summary="Get company details",
+        description="Get detailed information about a specific company including related data"
+    ),
+    spending_summary=extend_schema(
+        tags=['companies'],
+        summary="Get company spending summary",
+        description="Get comprehensive spending summary for a company across all categories",
+        parameters=[
+            OpenApiParameter(name='start_date', type=OpenApiTypes.DATE, description='Filter from date (YYYY-MM-DD)'),
+            OpenApiParameter(name='end_date', type=OpenApiTypes.DATE, description='Filter to date (YYYY-MM-DD)'),
+        ]
+    ),
+    top_spenders=extend_schema(
+        tags=['companies'],
+        summary="Get top spending companies",
+        description="Get top spending companies across all categories",
+        parameters=[
+            OpenApiParameter(name='limit', type=OpenApiTypes.INT, description='Number of companies to return (default: 10)'),
+            OpenApiParameter(name='spending_type', type=OpenApiTypes.STR, description='Filter by type (lobbying, political, charitable, all)'),
+            OpenApiParameter(name='start_date', type=OpenApiTypes.DATE, description='Filter from date'),
+            OpenApiParameter(name='end_date', type=OpenApiTypes.DATE, description='Filter to date'),
+        ]
+    ),
+    search=extend_schema(
+        tags=['companies'],
+        summary="Advanced company search",
+        description="Advanced search with multiple criteria and filters",
+        parameters=[
+            OpenApiParameter(name='q', type=OpenApiTypes.STR, description='Search query (name, ticker, CIK)'),
+            OpenApiParameter(name='min_spending', type=OpenApiTypes.DECIMAL, description='Minimum total spending'),
+            OpenApiParameter(name='max_spending', type=OpenApiTypes.DECIMAL, description='Maximum total spending'),
+            OpenApiParameter(name='has_lobbying', type=OpenApiTypes.BOOL, description='Filter companies with lobbying data'),
+            OpenApiParameter(name='has_charitable', type=OpenApiTypes.BOOL, description='Filter companies with charitable data'),
+            OpenApiParameter(name='has_political', type=OpenApiTypes.BOOL, description='Filter companies with political data'),
+        ]
+    )
+)
 class CompanyViewSet(viewsets.ModelViewSet):
     """API endpoint for companies with advanced filtering and search."""
     queryset = Company.objects.all()
@@ -284,6 +566,15 @@ class CompanyViewSet(viewsets.ModelViewSet):
         return lobbying_total + charitable_total + political_total
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['financial']),
+    retrieve=extend_schema(tags=['financial']),
+    financial_ratios=extend_schema(
+        tags=['financial'],
+        summary="Get financial ratios",
+        description="Calculate financial ratios for companies including profit margins"
+    )
+)
 class FinancialSummaryViewSet(viewsets.ModelViewSet):
     """API endpoint for financial summaries."""
     queryset = FinancialSummary.objects.all()
@@ -325,6 +616,20 @@ class FinancialSummaryViewSet(viewsets.ModelViewSet):
         return Response(results)
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['lobbying']),
+    retrieve=extend_schema(tags=['lobbying']),
+    spending_trends=extend_schema(
+        tags=['lobbying'],
+        summary="Get lobbying spending trends",
+        description="Get lobbying spending trends over time by year and quarter"
+    ),
+    top_issues=extend_schema(
+        tags=['lobbying'],
+        summary="Get top lobbied issues",
+        description="Get most lobbied issues and top lobbying companies"
+    )
+)
 class LobbyingReportViewSet(viewsets.ModelViewSet):
     """API endpoint for lobbying reports."""
     queryset = LobbyingReport.objects.all()
@@ -376,6 +681,20 @@ class LobbyingReportViewSet(viewsets.ModelViewSet):
         return Response(list(top_lobbyists))
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['political']),
+    retrieve=extend_schema(tags=['political']),
+    contribution_trends=extend_schema(
+        tags=['political'],
+        summary="Get contribution trends",
+        description="Get political contribution trends over time"
+    ),
+    party_breakdown=extend_schema(
+        tags=['political'],
+        summary="Get party breakdown",
+        description="Get political contributions broken down by party"
+    )
+)
 class PoliticalContributionViewSet(viewsets.ModelViewSet):
     """API endpoint for political contributions."""
     queryset = PoliticalContribution.objects.all()
@@ -429,6 +748,20 @@ class PoliticalContributionViewSet(viewsets.ModelViewSet):
         return Response(list(breakdown))
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['charitable']),
+    retrieve=extend_schema(tags=['charitable']),
+    category_breakdown=extend_schema(
+        tags=['charitable'],
+        summary="Get category breakdown",
+        description="Get charitable grants broken down by recipient category"
+    ),
+    grant_trends=extend_schema(
+        tags=['charitable'],
+        summary="Get grant trends",
+        description="Get charitable grant trends over time"
+    )
+)
 class CharitableGrantViewSet(viewsets.ModelViewSet):
     """API endpoint for charitable grants."""
     queryset = CharitableGrant.objects.all()

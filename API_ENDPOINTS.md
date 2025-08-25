@@ -4,8 +4,48 @@
 
 The Corporate Spending Tracker API provides comprehensive access to corporate spending data across lobbying, political contributions, charitable grants, and financial information. All endpoints support filtering, searching, and pagination.
 
-**Base URL**: `http://localhost:8000/api/` (when running locally)
+**Base URL**: `http://localhost:8000/api/` (when running locally)  
 **Base URL**: `http://your-domain:8000/api/` (when deployed)
+
+## 🚀 Auto-Generated Documentation
+
+This API now features **auto-generated documentation** using **drf-spectacular** that stays in sync with your code automatically!
+
+### 📖 Access Interactive Documentation
+
+- **Swagger UI**: http://localhost:8000/api/docs/ - Interactive API explorer with testing capabilities
+- **ReDoc**: http://localhost:8000/api/redoc/ - Clean, responsive documentation interface  
+- **Raw Schema**: http://localhost:8000/api/schema/ - OpenAPI 3.0 JSON schema
+
+### 🎯 Features of Auto-Generated Docs
+
+- **Real-time Updates**: Documentation automatically updates when you modify your code
+- **Interactive Testing**: Test endpoints directly from the Swagger UI
+- **Request/Response Examples**: See actual data structures and examples
+- **Parameter Validation**: Built-in parameter validation and type checking
+- **Authentication Support**: Test with different authentication methods
+- **Export Capabilities**: Export schemas for external tools (Postman, Insomnia, etc.)
+
+### 🔧 Generate Static Schema Files
+
+```bash
+# Generate JSON schema for external tools
+python manage.py spectacular --file api_schema.json --format openapi-json
+
+# Generate YAML schema
+python manage.py spectacular --file api_schema.yaml --format openapi
+
+# Use our custom command with statistics
+python manage.py generate_schema --output api_schema.json --format openapi-json
+```
+
+### 🔗 Integration with External Tools
+
+- **Postman**: Import the JSON schema for automatic collection generation
+- **Insomnia**: Import the YAML schema for API testing
+- **Code Generation**: Generate client libraries using OpenAPI generators
+
+---
 
 ## Authentication
 
@@ -99,14 +139,27 @@ GET /api/companies/{id}/spending_summary/
         "cik": "0000320193"
     },
     "spending_totals": {
-        "lobbying": 2500000,
-        "political_contributions": 1500000,
-        "charitable_grants": 5000000
+        "lobbying": 2500000.00,
+        "charitable": 5000000.00,
+        "political": 1000000.00,
+        "total": 8500000.00
     },
-    "spending_breakdown": {
-        "lobbying_by_quarter": {...},
-        "political_by_cycle": {...},
-        "charitable_by_category": {...}
+    "charitable_breakdown": [
+        {
+            "recipient_category": "Education",
+            "total": 3000000.00,
+            "count": 15
+        }
+    ],
+    "financial_context": {
+        "latest_revenue": 394328000000.00,
+        "latest_net_income": 96995000000.00,
+        "fiscal_year": 2023
+    },
+    "record_counts": {
+        "lobbying_reports": 12,
+        "charitable_grants": 25,
+        "political_contributions": 8
     }
 }
 ```
@@ -117,52 +170,52 @@ GET /api/companies/top_spenders/
 ```
 
 **Query Parameters:**
-- `spending_type`: Filter by type (lobbying, political, charitable, all)
 - `limit`: Number of companies to return (default: 10)
-- `start_date`: Filter from date (YYYY-MM-DD)
-- `end_date`: Filter to date (YYYY-MM-DD)
+- `category`: Filter by type (lobbying, charitable, political, all)
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "company": {
-                "id": 1,
-                "name": "Apple Inc.",
-                "ticker": "AAPL"
-            },
-            "total_spending": 9000000,
-            "lobbying": 2500000,
-            "political": 1500000,
-            "charitable": 5000000
+[
+    {
+        "company": {
+            "id": 1,
+            "name": "Apple Inc.",
+            "ticker": "AAPL"
+        },
+        "spending": {
+            "lobbying": 2500000.00,
+            "charitable": 5000000.00,
+            "political": 1000000.00,
+            "total": 8500000.00
         }
-    ]
-}
+    }
+]
 ```
 
-#### Company Search
+#### Advanced Company Search
 ```
 GET /api/companies/search/
 ```
 
 **Query Parameters:**
 - `q`: Search query (company name, ticker, or CIK)
-- `limit`: Number of results (default: 10)
+- `min_spending`: Minimum total spending
+- `max_spending`: Maximum total spending
+- `has_lobbying`: Filter companies with lobbying data (boolean)
+- `has_charitable`: Filter companies with charitable data (boolean)
+- `has_political`: Filter companies with political data (boolean)
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "id": 1,
-            "name": "Apple Inc.",
-            "ticker": "AAPL",
-            "cik": "0000320193",
-            "headquarters_location": "Cupertino, CA"
-        }
-    ]
-}
+[
+    {
+        "id": 1,
+        "name": "Apple Inc.",
+        "ticker": "AAPL",
+        "cik": "0000320193",
+        "headquarters_location": "Cupertino, CA"
+    }
+]
 ```
 
 ### Financial Summaries
@@ -174,12 +227,9 @@ GET /api/financial-summaries/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `filing_date`: Filter by filing date
-- `revenue_min`: Minimum revenue
-- `revenue_max`: Maximum revenue
-- `net_income_min`: Minimum net income
-- `net_income_max`: Maximum net income
-- `ordering`: Sort by filing_date, revenue, net_income
+- `fiscal_year`: Filter by fiscal year
+- `search`: Search in company name or ticker
+- `ordering`: Sort by fiscal_year, total_revenue, net_income
 
 **Response:**
 ```json
@@ -189,12 +239,11 @@ GET /api/financial-summaries/
         {
             "id": 1,
             "company": 1,
-            "filing_date": "2024-12-31",
-            "revenue": 394328000000,
-            "net_income": 96995000000,
-            "total_assets": 352755000000,
-            "total_liabilities": 287912000000,
-            "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000010/aapl-20240928.htm"
+            "fiscal_year": 2023,
+            "total_revenue": 394328000000.00,
+            "net_income": 96995000000.00,
+            "created_at": "2025-08-24T14:00:00Z",
+            "updated_at": "2025-08-24T14:00:00Z"
         }
     ]
 }
@@ -207,27 +256,19 @@ GET /api/financial-summaries/financial_ratios/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `ratio_type`: Filter by ratio type (profitability, liquidity, efficiency)
+- `year`: Filter by fiscal year
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "company": {
-                "id": 1,
-                "name": "Apple Inc.",
-                "ticker": "AAPL"
-            },
-            "ratios": {
-                "profit_margin": 0.246,
-                "return_on_assets": 0.275,
-                "debt_to_equity": 0.816,
-                "current_ratio": 1.225
-            }
-        }
-    ]
-}
+[
+    {
+        "company": "Apple Inc.",
+        "fiscal_year": 2023,
+        "revenue": 394328000000.00,
+        "net_income": 96995000000.00,
+        "profit_margin_percent": 24.6
+    }
+]
 ```
 
 ### Lobbying Reports
@@ -239,11 +280,10 @@ GET /api/lobbying-reports/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `registrant`: Filter by registrant name
-- `quarter`: Filter by quarter (YYYY-Q1, YYYY-Q2, etc.)
-- `amount_min`: Minimum amount spent
-- `amount_max`: Maximum amount spent
-- `ordering`: Sort by quarter, amount_spent
+- `year`: Filter by year
+- `quarter`: Filter by quarter (1-4)
+- `search`: Search in company name or specific issues
+- `ordering`: Sort by year, quarter, amount_spent, created_at
 
 **Response:**
 ```json
@@ -253,11 +293,13 @@ GET /api/lobbying-reports/
         {
             "id": 1,
             "company": 1,
-            "registrant": "Apple Inc.",
-            "quarter": "2024-Q4",
-            "amount_spent": 2500000,
-            "issues": ["Technology", "Privacy", "Tax Policy"],
-            "lobbyists": ["John Doe", "Jane Smith"]
+            "year": 2024,
+            "quarter": 4,
+            "amount_spent": 2500000.00,
+            "specific_issues": "Technology, Privacy, Tax Policy",
+            "report_url": "https://lda.senate.gov/reports/...",
+            "created_at": "2025-08-24T14:00:00Z",
+            "updated_at": "2025-08-24T14:00:00Z"
         }
     ]
 }
@@ -270,22 +312,19 @@ GET /api/lobbying-reports/spending_trends/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `start_quarter`: Filter from quarter
-- `end_quarter`: Filter to quarter
-- `group_by`: Group by quarter, year, or company
+- `start_year`: Start year (default: 2020)
+- `end_year`: End year (default: current year)
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "quarter": "2024-Q4",
-            "total_spending": 2500000,
-            "company_count": 1,
-            "registrant_count": 1
-        }
-    ]
-}
+[
+    {
+        "year": 2024,
+        "quarter": 4,
+        "total_spent": 2500000.00,
+        "report_count": 3
+    }
+]
 ```
 
 #### Top Lobbied Issues
@@ -294,22 +333,17 @@ GET /api/lobbying-reports/top_issues/
 ```
 
 **Query Parameters:**
-- `limit`: Number of issues to return (default: 10)
-- `start_quarter`: Filter from quarter
-- `end_quarter`: Filter to quarter
+- `limit`: Number of results (default: 10)
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "issue": "Technology",
-            "total_spending": 5000000,
-            "company_count": 2,
-            "report_count": 3
-        }
-    ]
-}
+[
+    {
+        "company__name": "Apple Inc.",
+        "total_spent": 5000000.00,
+        "report_count": 3
+    }
+]
 ```
 
 ### Political Contributions
@@ -320,14 +354,10 @@ GET /api/political-contributions/
 ```
 
 **Query Parameters:**
-- `company`: Filter by company ID
-- `committee`: Filter by committee name
-- `recipient`: Filter by recipient name
-- `amount_min`: Minimum contribution amount
-- `amount_max`: Maximum contribution amount
-- `date_min`: Filter from date
-- `date_max`: Filter to date
-- `ordering`: Sort by date, amount
+- `election_cycle`: Filter by election cycle
+- `recipient_party`: Filter by recipient party
+- `search`: Search in company PAC ID or recipient name
+- `ordering`: Sort by date, amount, election_cycle
 
 **Response:**
 ```json
@@ -336,13 +366,14 @@ GET /api/political-contributions/
     "results": [
         {
             "id": 1,
-            "company": 1,
-            "committee": "Apple Inc. PAC",
-            "recipient": "John Smith",
-            "amount": 5000,
+            "company_pac_id": "Apple Inc. PAC",
+            "recipient_name": "John Smith",
+            "recipient_party": "Democratic",
+            "amount": 5000.00,
             "date": "2024-10-15",
-            "party": "Democratic",
-            "state": "CA"
+            "election_cycle": "2024",
+            "created_at": "2025-08-24T14:00:00Z",
+            "updated_at": "2025-08-24T14:00:00Z"
         }
     ]
 }
@@ -354,23 +385,19 @@ GET /api/political-contributions/contribution_trends/
 ```
 
 **Query Parameters:**
-- `company`: Filter by company ID
-- `start_date`: Filter from date
-- `end_date`: Filter to date
-- `group_by`: Group by month, quarter, year, or party
+- `start_date`: Start date (YYYY-MM-DD)
+- `end_date`: End date (YYYY-MM-DD)
+- `election_cycle`: Filter by election cycle
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "period": "2024-Q4",
-            "total_amount": 1500000,
-            "contribution_count": 150,
-            "company_count": 1
-        }
-    ]
-}
+[
+    {
+        "month": "2024-01-01T00:00:00Z",
+        "total_amount": 250000.00,
+        "contribution_count": 5
+    }
+]
 ```
 
 #### Party Breakdown
@@ -379,26 +406,17 @@ GET /api/political-contributions/party_breakdown/
 ```
 
 **Query Parameters:**
-- `company`: Filter by company ID
-- `start_date`: Filter from date
-- `end_date`: Filter to date
+- `election_cycle`: Filter by election cycle
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "party": "Democratic",
-            "total_amount": 800000,
-            "contribution_count": 80
-        },
-        {
-            "party": "Republican",
-            "total_amount": 700000,
-            "contribution_count": 70
-        }
-    ]
-}
+[
+    {
+        "recipient_party": "Democratic",
+        "total_amount": 150000.00,
+        "contribution_count": 3
+    }
+]
 ```
 
 ### Charitable Grants
@@ -410,14 +428,10 @@ GET /api/charitable-grants/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `foundation`: Filter by foundation name
-- `recipient`: Filter by recipient name
-- `category`: Filter by grant category
-- `amount_min`: Minimum grant amount
-- `amount_max`: Maximum grant amount
-- `date_min`: Filter from date
-- `date_max`: Filter to date
-- `ordering`: Sort by date, amount
+- `fiscal_year`: Filter by fiscal year
+- `recipient_category`: Filter by recipient category
+- `search`: Search in company name, recipient name, or grant description
+- `ordering`: Sort by fiscal_year, amount, created_at
 
 **Response:**
 ```json
@@ -427,12 +441,14 @@ GET /api/charitable-grants/
         {
             "id": 1,
             "company": 1,
-            "foundation": "Apple Foundation",
-            "recipient": "Red Cross",
-            "amount": 1000000,
-            "date": "2024-12-01",
-            "category": "Humanitarian",
-            "description": "Disaster relief funding"
+            "recipient_name": "Red Cross",
+            "recipient_ein": "53-0196605",
+            "amount": 1000000.00,
+            "fiscal_year": 2024,
+            "grant_description": "Disaster relief funding",
+            "recipient_category": "Humanitarian",
+            "created_at": "2025-08-24T14:00:00Z",
+            "updated_at": "2025-08-24T14:00:00Z"
         }
     ]
 }
@@ -445,25 +461,17 @@ GET /api/charitable-grants/category_breakdown/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `start_date`: Filter from date
-- `end_date`: Filter to date
+- `fiscal_year`: Filter by fiscal year
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "category": "Humanitarian",
-            "total_amount": 2000000,
-            "grant_count": 5
-        },
-        {
-            "category": "Education",
-            "total_amount": 1500000,
-            "grant_count": 3
-        }
-    ]
-}
+[
+    {
+        "recipient_category": "Humanitarian",
+        "total_amount": 2000000.00,
+        "grant_count": 5
+    }
+]
 ```
 
 #### Grant Trends
@@ -473,22 +481,18 @@ GET /api/charitable-grants/grant_trends/
 
 **Query Parameters:**
 - `company`: Filter by company ID
-- `start_date`: Filter from date
-- `end_date`: Filter to date
-- `group_by`: Group by month, quarter, year, or category
+- `start_year`: Start year (default: 2020)
+- `end_year`: End year (default: current year)
 
 **Response:**
 ```json
-{
-    "results": [
-        {
-            "period": "2024-Q4",
-            "total_amount": 5000000,
-            "grant_count": 10,
-            "company_count": 1
-        }
-    ]
-}
+[
+    {
+        "fiscal_year": 2024,
+        "total_amount": 5000000.00,
+        "grant_count": 25
+    }
+]
 ```
 
 ## Analytics Endpoints
@@ -504,11 +508,11 @@ GET /api/analytics/dashboard/
 ```json
 {
     "total_companies": 150,
-    "total_spending": 500000000,
+    "total_spending": 500000000.00,
     "spending_breakdown": {
-        "lobbying": 200000000,
-        "political": 150000000,
-        "charitable": 150000000
+        "lobbying": 200000000.00,
+        "political": 150000000.00,
+        "charitable": 150000000.00
     },
     "recent_activity": {
         "new_companies": 5,
@@ -523,11 +527,6 @@ GET /api/analytics/dashboard/
 GET /api/analytics/spending_comparison/
 ```
 
-**Query Parameters:**
-- `companies`: Comma-separated list of company IDs
-- `spending_type`: Type to compare (lobbying, political, charitable, all)
-- `period`: Time period (year, quarter, month)
-
 **Response:**
 ```json
 {
@@ -539,11 +538,58 @@ GET /api/analytics/spending_comparison/
                 "ticker": "AAPL"
             },
             "spending": {
-                "lobbying": 2500000,
-                "political": 1500000,
-                "charitable": 5000000,
-                "total": 9000000
+                "lobbying": 2500000.00,
+                "charitable": 5000000.00,
+                "political": 1000000.00,
+                "total": 8500000.00
             }
+        }
+    ]
+}
+```
+
+## System Endpoints
+
+### Frontend Logging
+```
+POST /api/logs/
+```
+
+**Request Body:**
+```json
+{
+    "timestamp": "2024-01-15T10:30:00Z",
+    "level": "INFO",
+    "message": "User performed search",
+    "data": {"query": "apple", "results": 5},
+    "userAgent": "Mozilla/5.0...",
+    "url": "/search"
+}
+```
+
+**Response:**
+```json
+{
+    "status": "success"
+}
+```
+
+### Get Logs
+```
+GET /api/logs/get/
+```
+
+**Response:**
+```json
+{
+    "logs": [
+        {
+            "timestamp": "2024-01-15T10:30:00Z",
+            "level": "INFO",
+            "message": "User performed search",
+            "data": {"query": "apple", "results": 5},
+            "user_agent": "Mozilla/5.0...",
+            "url": "/search"
         }
     ]
 }
@@ -594,10 +640,110 @@ curl "http://localhost:8000/api/companies/top_spenders/?limit=10"
 
 ### Get lobbying trends for 2024
 ```bash
-curl "http://localhost:8000/api/lobbying-reports/spending_trends/?start_quarter=2024-Q1&end_quarter=2024-Q4"
+curl "http://localhost:8000/api/lobbying-reports/spending_trends/?start_year=2024&end_year=2024"
 ```
 
 ### Get charitable grants by category
 ```bash
 curl "http://localhost:8000/api/charitable-grants/category_breakdown/"
 ```
+
+### Test the dashboard analytics
+```bash
+curl "http://localhost:8000/api/analytics/dashboard/"
+```
+
+### Get spending comparison data
+```bash
+curl "http://localhost:8000/api/analytics/spending_comparison/"
+```
+
+---
+
+## 🔧 Development & Customization
+
+### Auto-Generated Documentation Features
+
+The auto-generated documentation includes:
+
+- **Complete API Endpoints**: All ViewSet actions and custom endpoints
+- **Request/Response Schemas**: Based on your serializers
+- **Query Parameters**: From filters, search, and pagination
+- **Path Parameters**: From URL patterns
+- **Authentication**: If configured
+- **Examples**: From serializer fields and docstrings
+- **Tags**: Organized by endpoint categories
+- **Descriptions**: From docstrings and decorators
+
+### Schema Configuration
+
+The documentation is configured in `settings.py` with comprehensive settings:
+
+```python
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Corporate Spending Tracker API',
+    'DESCRIPTION': 'Comprehensive API for accessing corporate spending data...',
+    'VERSION': '1.0.0',
+    'TAGS': [
+        {'name': 'companies', 'description': 'Company management endpoints'},
+        {'name': 'analytics', 'description': 'Analytics and reporting endpoints'},
+        {'name': 'lobbying', 'description': 'Lobbying report data endpoints'},
+        {'name': 'political', 'description': 'Political contribution endpoints'},
+        {'name': 'charitable', 'description': 'Charitable grant endpoints'},
+        {'name': 'financial', 'description': 'Financial summary endpoints'},
+        {'name': 'system', 'description': 'System and logging endpoints'},
+    ],
+}
+```
+
+### Adding New Endpoints
+
+When you add new endpoints, they automatically appear in the documentation. For enhanced documentation, use decorators:
+
+```python
+@extend_schema(
+    tags=['companies'],
+    summary="Get company details",
+    description="Retrieve detailed information about a specific company",
+    parameters=[
+        OpenApiParameter(name='include_spending', type=OpenApiTypes.BOOL, description='Include spending data'),
+    ],
+    responses={
+        200: CompanyDetailSerializer,
+        404: {'type': 'object', 'properties': {'error': {'type': 'string'}}}
+    }
+)
+def retrieve(self, request, pk=None):
+    """Get detailed company information."""
+    # Your view logic here
+```
+
+### Schema Validation
+
+Validate your schema:
+```bash
+python manage.py spectacular --validate
+```
+
+### Export for External Tools
+
+Export schemas for external API testing tools:
+```bash
+# For Postman
+python manage.py spectacular --file postman_schema.json --format openapi-json
+
+# For Insomnia
+python manage.py spectacular --file insomnia_schema.yaml --format openapi
+```
+
+---
+
+## 📚 Additional Resources
+
+- **Interactive Documentation**: http://localhost:8000/api/docs/
+- **ReDoc Interface**: http://localhost:8000/api/redoc/
+- **Raw Schema**: http://localhost:8000/api/schema/
+- **drf-spectacular Documentation**: https://drf-spectacular.readthedocs.io/
+- **OpenAPI Specification**: https://swagger.io/specification/
+
+This API documentation is now **automatically maintained** and stays in sync with your code. The interactive documentation provides the most up-to-date information about all endpoints, parameters, and response formats.

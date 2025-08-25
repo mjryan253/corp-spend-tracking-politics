@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'corsheaders',
+    'drf_spectacular',
     'data_collection',
 ]
 
@@ -154,20 +155,60 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework settings
+# Django REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+# drf-spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Corporate Spending Tracker API',
+    'DESCRIPTION': '''
+    Comprehensive API for accessing corporate spending data across lobbying, political contributions, and charitable grants.
+    
+    This API provides access to:
+    - **Companies**: Search and filter corporate entities
+    - **Lobbying Reports**: Federal lobbying disclosure data
+    - **Political Contributions**: FEC campaign finance data
+    - **Charitable Grants**: IRS tax-exempt organization data
+    - **Financial Summaries**: Corporate financial context
+    - **Analytics**: Dashboard statistics and spending comparisons
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'CONTACT': {
+        'name': 'API Support',
+        'email': 'support@example.com',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+        'url': 'https://opensource.org/licenses/MIT',
+    },
+    'TAGS': [
+        {'name': 'companies', 'description': 'Company management and search endpoints'},
+        {'name': 'analytics', 'description': 'Dashboard and analytics endpoints'},
+        {'name': 'lobbying', 'description': 'Lobbying report data endpoints'},
+        {'name': 'political', 'description': 'Political contribution endpoints'},
+        {'name': 'charitable', 'description': 'Charitable grant endpoints'},
+        {'name': 'financial', 'description': 'Financial summary endpoints'},
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ],
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
+    'REDOC_UI_SETTINGS': {
+        'hideDownloadButton': True,
+        'hideHostname': False,
+        'hideLoading': False,
+    },
 }

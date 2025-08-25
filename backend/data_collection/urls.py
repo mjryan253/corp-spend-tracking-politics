@@ -13,4 +13,6 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/logs/', views.log_frontend, name='log-frontend'),
     path('api/logs/get/', views.get_logs, name='get-logs'),
+    path('api/analytics/dashboard/', views.dashboard_summary, name='dashboard-summary'),
+    path('api/analytics/spending_comparison/', views.spending_comparison, name='spending-comparison'),
 ]
