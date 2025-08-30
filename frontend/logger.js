@@ -19,7 +19,7 @@ class FrontendLogger {
 
         try {
             // Send log to backend endpoint
-            await fetch('http://127.0.0.1:8000/api/logs/', {
+            await fetch(window.CONFIG_HELPERS.getApiUrl('logs/'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

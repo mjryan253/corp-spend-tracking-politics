@@ -14,6 +14,9 @@
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- Configuration -->
+    <script src="config.js"></script>
+    
     <!-- Frontend Logger -->
     <script src="logger.js"></script>
     
@@ -130,10 +133,10 @@
                             class="px-3 py-2 rounded-md text-sm font-medium transition-colors">
                         📈 Analytics
                     </button>
-                    <a href="http://localhost:8000/api/docs/" target="_blank" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                    <a :href="APP_CONFIG.DOCS.SWAGGER" target="_blank" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
                         📚 API Docs (Swagger)
                     </a>
-                    <a href="http://localhost:8000/api/redoc/" target="_blank" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                    <a :href="APP_CONFIG.DOCS.REDOC" target="_blank" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
                         📖 API Docs (ReDoc)
                     </a>
                 </div>
@@ -713,7 +716,7 @@
                             params.append('has_political', 'true');
                         }
 
-                        const url = `http://127.0.0.1:8000/api/companies/search/?${params}`;
+                        const url = CONFIG_HELPERS.getApiUrl(`companies/search/?${params}`);
                         await frontendLogger.debug('Making API request', { url, params: Object.fromEntries(params) });
 
                         const response = await fetch(url);
@@ -784,7 +787,7 @@
                     await frontendLogger.info('Load All Companies button clicked');
                     this.loading = true;
                     try {
-                        const url = 'http://127.0.0.1:8000/api/companies/';
+                        const url = CONFIG_HELPERS.getApiUrl('companies/');
                         await frontendLogger.debug('Making API request to load all companies', { url });
 
                         const response = await fetch(url);
@@ -828,7 +831,7 @@
                     frontendLogger.info('Loading company detail data', { companyId });
                     this.loading = true;
                     try {
-                        const url = `http://127.0.0.1:8000/api/companies/${companyId}/spending_summary/`;
+                        const url = CONFIG_HELPERS.getApiUrl(`companies/${companyId}/spending_summary/`);
                         await frontendLogger.debug('Making API request for company details', { url });
 
                         const response = await fetch(url);
@@ -883,7 +886,7 @@
                 async loadDashboardStats() {
                     this.loading = true;
                     try {
-                        const url = 'http://127.0.0.1:8000/api/analytics/dashboard/';
+                        const url = CONFIG_HELPERS.getApiUrl('analytics/dashboard/');
                         const response = await fetch(url);
                         const data = await response.json();
                         
@@ -902,10 +905,10 @@
                     this.topSpendersLoading = true;
                     try {
                         const params = new URLSearchParams();
-                        params.append('spending_type', type);
+                        params.append('category', type);
                         params.append('limit', '10');
                         
-                        const url = `http://127.0.0.1:8000/api/companies/top_spenders/?${params}`;
+                        const url = CONFIG_HELPERS.getApiUrl(`companies/top_spenders/?${params}`);
                         const response = await fetch(url);
                         const data = await response.json();
                         
@@ -957,10 +960,10 @@
                             params.append('year', this.analyticsFilters.period);
                         }
                         if (this.analyticsFilters.type !== 'all') {
-                            params.append('spending_type', this.analyticsFilters.type);
+                            params.append('category', this.analyticsFilters.type);
                         }
                         
-                        const url = `http://127.0.0.1:8000/api/analytics/spending_comparison/?${params}`;
+                        const url = CONFIG_HELPERS.getApiUrl(`analytics/spending_comparison/?${params}`);
                         const response = await fetch(url);
                         const data = await response.json();
                         

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
@@ -11,7 +11,7 @@ from decimal import Decimal
 import json
 import os
 from django.conf import settings
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
 from .models import Company, FinancialSummary, LobbyingReport, PoliticalContribution, CharitableGrant
@@ -19,6 +19,7 @@ from .serializers import (
     CompanySerializer, CompanyDetailSerializer, FinancialSummarySerializer,
     LobbyingReportSerializer, PoliticalContributionSerializer, CharitableGrantSerializer
 )
+from .utils.spending_calculator import SpendingCalculator
 
 # Simple logging function
 @extend_schema(
@@ -172,23 +173,8 @@ def get_logs(request):
 def dashboard_summary(request):
     """Get dashboard summary statistics"""
     try:
-        # Get total companies
-        total_companies = Company.objects.count()
-        
-        # Calculate total spending across all categories
-        lobbying_total = LobbyingReport.objects.aggregate(
-            total=Sum('amount_spent')
-        )['total'] or Decimal('0')
-        
-        charitable_total = CharitableGrant.objects.aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0')
-        
-        political_total = PoliticalContribution.objects.aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0')
-        
-        total_spending = lobbying_total + charitable_total + political_total
+        # Use the spending calculator for consistent statistics
+        spending_stats = SpendingCalculator.get_spending_statistics()
         
         # Get recent activity (last 30 days)
         thirty_days_ago = timezone.now() - timedelta(days=30)
@@ -205,18 +191,21 @@ def dashboard_summary(request):
             created_at__gte=thirty_days_ago
         ).count()
         
+        new_grants = CharitableGrant.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).count()
+        
         return Response({
-            'total_companies': total_companies,
-            'total_spending': float(total_spending),
-            'spending_breakdown': {
-                'lobbying': float(lobbying_total),
-                'political': float(political_total),
-                'charitable': float(charitable_total)
-            },
+            'total_companies': spending_stats['total_companies'],
+            'total_spending': spending_stats['total_spending'],
+            'spending_breakdown': spending_stats['spending_breakdown'],
+            'companies_by_category': spending_stats['companies_by_category'],
+            'average_spending_per_company': spending_stats['average_spending_per_company'],
             'recent_activity': {
                 'new_companies': new_companies,
                 'new_reports': new_reports,
-                'new_contributions': new_contributions
+                'new_contributions': new_contributions,
+                'new_grants': new_grants
             }
         }, status=status.HTTP_200_OK)
         
@@ -267,45 +256,23 @@ def dashboard_summary(request):
 def spending_comparison(request):
     """Get spending comparison data for analytics"""
     try:
-        companies = Company.objects.all()
-        results = []
+        # Parse optional parameters
+        limit = int(request.GET.get('limit', 100))  # Default to top 100 companies
+        category = request.GET.get('category', 'all')
         
-        for company in companies:
-            # Calculate spending for this company
-            lobbying_total = company.lobbying_reports.aggregate(
-                total=Sum('amount_spent')
-            )['total'] or Decimal('0')
-            
-            charitable_total = company.charitable_grants.aggregate(
-                total=Sum('amount')
-            )['total'] or Decimal('0')
-            
-            political_total = PoliticalContribution.objects.filter(
-                company_pac_id__icontains=company.name.split()[0]
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
-            total_spending = lobbying_total + charitable_total + political_total
-            
-            if total_spending > 0:
-                results.append({
-                    'company': {
-                        'id': company.id,
-                        'name': company.name,
-                        'ticker': company.ticker,
-                    },
-                    'spending': {
-                        'lobbying': float(lobbying_total),
-                        'charitable': float(charitable_total),
-                        'political': float(political_total),
-                        'total': float(total_spending),
-                    }
-                })
-        
-        # Sort by total spending
-        results.sort(key=lambda x: x['spending']['total'], reverse=True)
+        # Use the spending calculator for consistent data
+        results = SpendingCalculator.get_top_spenders(
+            limit=limit,
+            category=category
+        )
         
         return Response({
-            'results': results
+            'results': results,
+            'metadata': {
+                'total_results': len(results),
+                'category_filter': category,
+                'limit': limit
+            }
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -387,41 +354,50 @@ class CompanyViewSet(viewsets.ModelViewSet):
         """Get comprehensive spending summary for a company."""
         company = self.get_object()
         
-        # Get date range from query params
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
+        # Parse date range from query params
+        start_date = None
+        end_date = None
         
-        # Base querysets
+        if request.query_params.get('start_date'):
+            try:
+                start_date = datetime.strptime(
+                    request.query_params.get('start_date'), '%Y-%m-%d'
+                ).date()
+            except ValueError:
+                pass
+        
+        if request.query_params.get('end_date'):
+            try:
+                end_date = datetime.strptime(
+                    request.query_params.get('end_date'), '%Y-%m-%d'
+                ).date()
+            except ValueError:
+                pass
+        
+        # Use the spending calculator for consistent logic
+        spending_data = SpendingCalculator.calculate_spending_breakdown(
+            company, start_date, end_date
+        )
+        
+        # Get recent financial data
+        latest_financial = company.financial_summaries.order_by('-fiscal_year').first()
+        
+        # Count records within date range
         lobbying_qs = company.lobbying_reports.all()
         charitable_qs = company.charitable_grants.all()
         political_qs = PoliticalContribution.objects.filter(
             company_pac_id__icontains=company.name.split()[0]
         )
         
-        # Apply date filters if provided
         if start_date:
-            lobbying_qs = lobbying_qs.filter(year__gte=int(start_date))
-            charitable_qs = charitable_qs.filter(fiscal_year__gte=int(start_date))
+            lobbying_qs = lobbying_qs.filter(year__gte=start_date.year)
+            charitable_qs = charitable_qs.filter(fiscal_year__gte=start_date.year)
             political_qs = political_qs.filter(date__gte=start_date)
         
         if end_date:
-            lobbying_qs = lobbying_qs.filter(year__lte=int(end_date))
-            charitable_qs = charitable_qs.filter(fiscal_year__lte=int(end_date))
+            lobbying_qs = lobbying_qs.filter(year__lte=end_date.year)
+            charitable_qs = charitable_qs.filter(fiscal_year__lte=end_date.year)
             political_qs = political_qs.filter(date__lte=end_date)
-        
-        # Calculate totals
-        lobbying_total = lobbying_qs.aggregate(total=Sum('amount_spent'))['total'] or Decimal('0')
-        charitable_total = charitable_qs.aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        political_total = political_qs.aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        
-        # Get category breakdown for charitable grants
-        charitable_by_category = charitable_qs.values('recipient_category').annotate(
-            total=Sum('amount'),
-            count=Count('id')
-        ).order_by('-total')
-        
-        # Get recent financial data
-        latest_financial = company.financial_summaries.order_by('-fiscal_year').first()
         
         return Response({
             'company': {
@@ -430,16 +406,10 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 'ticker': company.ticker,
                 'cik': company.cik,
             },
-            'spending_totals': {
-                'lobbying': float(lobbying_total),
-                'charitable': float(charitable_total),
-                'political': float(political_total),
-                'total': float(lobbying_total + charitable_total + political_total),
-            },
-            'charitable_breakdown': list(charitable_by_category),
+            **spending_data,
             'financial_context': {
-                'latest_revenue': float(latest_financial.total_revenue) if latest_financial else None,
-                'latest_net_income': float(latest_financial.net_income) if latest_financial else None,
+                'latest_revenue': float(latest_financial.total_revenue) if latest_financial and latest_financial.total_revenue else None,
+                'latest_net_income': float(latest_financial.net_income) if latest_financial and latest_financial.net_income else None,
                 'fiscal_year': latest_financial.fiscal_year if latest_financial else None,
             },
             'record_counts': {
@@ -455,52 +425,35 @@ class CompanyViewSet(viewsets.ModelViewSet):
         limit = int(request.query_params.get('limit', 10))
         category = request.query_params.get('category', 'all')  # all, lobbying, charitable, political
         
-        companies = Company.objects.all()
-        results = []
+        # Parse optional date filters
+        start_date = None
+        end_date = None
         
-        for company in companies:
-            # Calculate spending based on category
-            if category == 'lobbying' or category == 'all':
-                lobbying_total = company.lobbying_reports.aggregate(
-                    total=Sum('amount_spent')
-                )['total'] or Decimal('0')
-            else:
-                lobbying_total = Decimal('0')
-                
-            if category == 'charitable' or category == 'all':
-                charitable_total = company.charitable_grants.aggregate(
-                    total=Sum('amount')
-                )['total'] or Decimal('0')
-            else:
-                charitable_total = Decimal('0')
-                
-            if category == 'political' or category == 'all':
-                political_total = PoliticalContribution.objects.filter(
-                    company_pac_id__icontains=company.name.split()[0]
-                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            else:
-                political_total = Decimal('0')
-            
-            total_spending = lobbying_total + charitable_total + political_total
-            
-            if total_spending > 0:
-                results.append({
-                    'company': {
-                        'id': company.id,
-                        'name': company.name,
-                        'ticker': company.ticker,
-                    },
-                    'spending': {
-                        'lobbying': float(lobbying_total),
-                        'charitable': float(charitable_total),
-                        'political': float(political_total),
-                        'total': float(total_spending),
-                    }
-                })
+        if request.query_params.get('start_date'):
+            try:
+                start_date = datetime.strptime(
+                    request.query_params.get('start_date'), '%Y-%m-%d'
+                ).date()
+            except ValueError:
+                pass
         
-        # Sort by total spending and limit results
-        results.sort(key=lambda x: x['spending']['total'], reverse=True)
-        return Response(results[:limit])
+        if request.query_params.get('end_date'):
+            try:
+                end_date = datetime.strptime(
+                    request.query_params.get('end_date'), '%Y-%m-%d'
+                ).date()
+            except ValueError:
+                pass
+        
+        # Use the centralized spending calculator
+        results = SpendingCalculator.get_top_spenders(
+            limit=limit,
+            category=category,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return Response(results)
 
     @action(detail=False, methods=['get'])
     def search(self, request):
@@ -524,16 +477,14 @@ class CompanyViewSet(viewsets.ModelViewSet):
         
         # Filter by spending criteria
         if min_spending or max_spending:
-            companies_with_spending = []
-            for company in queryset:
-                total_spending = self._calculate_company_spending(company)
-                
-                if min_spending and total_spending < Decimal(min_spending):
-                    continue
-                if max_spending and total_spending > Decimal(max_spending):
-                    continue
-                    
-                companies_with_spending.append(company.id)
+            min_decimal = Decimal(min_spending) if min_spending else None
+            max_decimal = Decimal(max_spending) if max_spending else None
+            
+            companies_with_spending = SpendingCalculator.filter_companies_by_spending(
+                queryset=queryset,
+                min_spending=min_decimal,
+                max_spending=max_decimal
+            )
             
             queryset = queryset.filter(id__in=companies_with_spending)
         
@@ -548,22 +499,6 @@ class CompanyViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
-    def _calculate_company_spending(self, company):
-        """Calculate total spending for a company."""
-        lobbying_total = company.lobbying_reports.aggregate(
-            total=Sum('amount_spent')
-        )['total'] or Decimal('0')
-        
-        charitable_total = company.charitable_grants.aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0')
-        
-        political_total = PoliticalContribution.objects.filter(
-            company_pac_id__icontains=company.name.split()[0]
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        
-        return lobbying_total + charitable_total + political_total
 
 
 @extend_schema_view(

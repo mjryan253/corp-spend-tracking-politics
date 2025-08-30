@@ -1,11 +1,18 @@
 import requests
 import os
+import logging
 from datetime import datetime, date
 from decimal import Decimal
 from typing import List, Dict, Any
 from dotenv import load_dotenv
+from .error_handler import (
+    robust_api_request, retry_on_failure, log_api_metrics, 
+    track_api_calls, circuit_breaker, APIError, RateLimitError,
+    api_counter
+)
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class FECIngestion:
@@ -19,11 +26,20 @@ class FECIngestion:
             'Content-Type': 'application/json'
         }
         
+        # Initialize statistics
+        self.stats = {
+            'total_requests': 0,
+            'successful_requests': 0,
+            'failed_requests': 0,
+            'records_processed': 0,
+            'errors': []
+        }
+        
         # Log API key status
         if self.api_key and self.api_key != 'your_fec_api_key_here':
-            print(f"✅ FEC API key found: {self.api_key[:8]}...")
+            logger.info(f"✅ FEC API key found: {self.api_key[:8]}...")
         else:
-            print("⚠️  FEC API key not found or not configured. Using mock data.")
+            logger.warning("⚠️  FEC API key not found or not configured. Using mock data.")
     
     def fetch_data(self, year: int = None, committee_id: str = None) -> List[Dict[str, Any]]:
         """
@@ -41,10 +57,10 @@ class FECIngestion:
             
         # Check if API key is available and properly configured
         if not self.api_key or self.api_key == 'your_fec_api_key_here':
-            print("📊 Using mock FEC data for development/testing")
+            logger.info("📊 Using mock FEC data for development/testing")
             return self._get_mock_data(year)
             
-        print(f"🔗 Fetching real FEC data for year {year}...")
+        logger.info(f"🔗 Fetching real FEC data for year {year}...")
         contributions = []
         
         # Get committee IDs for corporate PACs
@@ -59,16 +75,22 @@ class FECIngestion:
                     committee_id, year
                 )
                 contributions.extend(committee_contributions)
+                self.stats['successful_requests'] += 1
             except Exception as e:
-                print(f"❌ Error fetching data for committee {committee_id}: {e}")
+                error_msg = f"Error fetching data for committee {committee_id}: {e}"
+                logger.error(f"❌ {error_msg}")
+                self.stats['failed_requests'] += 1
+                self.stats['errors'].append(error_msg)
                 continue
+        
+        self.stats['records_processed'] = len(contributions)
         
         # If no real data was fetched, return mock data
         if not contributions:
-            print("⚠️  No real FEC data fetched. Falling back to mock data.")
+            logger.warning("⚠️  No real FEC data fetched. Falling back to mock data.")
             return self._get_mock_data(year)
         
-        print(f"✅ Successfully fetched {len(contributions)} FEC records")
+        logger.info(f"✅ Successfully fetched {len(contributions)} FEC records")
         return contributions
     
     def _get_corporate_pac_ids(self) -> List[str]:
@@ -81,8 +103,12 @@ class FECIngestion:
             'C00345678',  # Example Google PAC
         ]
     
+    @retry_on_failure
+    @log_api_metrics
+    @track_api_calls('fec_committee_contributions')
+    @circuit_breaker(failure_threshold=3, recovery_timeout=300)
     def _fetch_committee_contributions(self, committee_id: str, year: int) -> List[Dict[str, Any]]:
-        """Fetch contributions for a specific committee."""
+        """Fetch contributions for a specific committee with robust error handling."""
         url = f"{self.base_url}/schedules/schedule_a/"
         
         params = {
@@ -94,16 +120,26 @@ class FECIngestion:
         }
         
         contributions = []
+        max_pages = 50  # Limit to prevent runaway pagination
         
-        while True:
+        while params['page'] <= max_pages:
             try:
-                response = requests.get(url, headers=self.headers, params=params)
-                response.raise_for_status()
+                self.stats['total_requests'] += 1
+                
+                response = robust_api_request(
+                    url=url,
+                    method='GET',
+                    headers=self.headers,
+                    params=params,
+                    timeout=30,
+                    max_retries=3
+                )
                 
                 data = response.json()
                 results = data.get('results', [])
                 
                 if not results:
+                    logger.info(f"No more results for committee {committee_id} at page {params['page']}")
                     break
                 
                 for contribution in results:
@@ -113,15 +149,25 @@ class FECIngestion:
                 
                 # Check if there are more pages
                 pagination = data.get('pagination', {})
-                if pagination.get('page', 1) >= pagination.get('pages', 1):
+                total_pages = pagination.get('pages', 1)
+                current_page = pagination.get('page', 1)
+                
+                logger.debug(f"Processed page {current_page}/{total_pages} for committee {committee_id}")
+                
+                if current_page >= total_pages:
                     break
                     
                 params['page'] += 1
                 
-            except requests.RequestException as e:
-                print(f"Error fetching contributions for committee {committee_id}: {e}")
+            except (APIError, RateLimitError) as e:
+                logger.error(f"API error fetching contributions for committee {committee_id}: {e}")
+                # Let the retry decorator handle retries
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error fetching contributions for committee {committee_id}: {e}")
                 break
         
+        logger.info(f"Fetched {len(contributions)} contributions for committee {committee_id}")
         return contributions
     
     def _process_contribution(self, contribution: Dict[str, Any]) -> Dict[str, Any]:
@@ -153,17 +199,50 @@ class FECIngestion:
         except ValueError:
             return None
     
+    @retry_on_failure
+    @log_api_metrics
+    @track_api_calls('fec_committee_info')
     def get_committee_info(self, committee_id: str) -> Dict[str, Any]:
-        """Get detailed information about a committee."""
+        """Get detailed information about a committee with robust error handling."""
         url = f"{self.base_url}/committee/{committee_id}/"
         
         try:
-            response = requests.get(url, headers=self.headers)
-            response.raise_for_status()
+            response = robust_api_request(
+                url=url,
+                method='GET',
+                headers=self.headers,
+                timeout=30,
+                max_retries=2
+            )
             return response.json()
-        except requests.RequestException as e:
-            print(f"Error fetching committee info for {committee_id}: {e}")
+        except (APIError, RateLimitError) as e:
+            logger.error(f"API error fetching committee info for {committee_id}: {e}")
             return {}
+        except Exception as e:
+            logger.error(f"Unexpected error fetching committee info for {committee_id}: {e}")
+            return {}
+    
+    def get_ingestion_stats(self) -> Dict[str, Any]:
+        """Get ingestion statistics."""
+        global_stats = api_counter.get_stats()
+        return {
+            'fec_specific': self.stats,
+            'global_api_stats': global_stats,
+            'success_rate': (
+                self.stats['successful_requests'] / max(self.stats['total_requests'], 1) * 100
+                if self.stats['total_requests'] > 0 else 0
+            )
+        }
+    
+    def reset_stats(self):
+        """Reset ingestion statistics."""
+        self.stats = {
+            'total_requests': 0,
+            'successful_requests': 0,
+            'failed_requests': 0,
+            'records_processed': 0,
+            'errors': []
+        }
 
     def _get_mock_data(self, year: int) -> List[Dict[str, Any]]:
         """Return mock FEC data for development/testing."""

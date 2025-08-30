@@ -12,7 +12,7 @@ This application provides a transparent view of corporate influence by collectin
   * **🙏 Charitable & Religious Spending**: IRS Database of Tax-Exempt Organizations.
   * **💰 Corporate Financial Context**: SEC EDGAR.
 
-The backend is built with **Django** and **PostgreSQL**, providing a robust API, while the frontend is a lightweight, responsive interface built with **Alpine.js** and **Tailwind CSS**.
+The backend is built with **Django** and **PostgreSQL**, providing a robust API with 24+ endpoints and auto-generated documentation, while the frontend is a modern, responsive interface built with **Alpine.js** and **Tailwind CSS** featuring interactive dashboards and data visualizations.
 
 ## 🚀 Quick Start
 
@@ -80,7 +80,7 @@ python manage.py spectacular --file api_schema.yaml --format openapi
 python manage.py generate_schema --output api_schema.json --format openapi-json
 ```
 
-For complete API details, see **[API Documentation](API_ENDPOINTS.md)**.
+For complete API details, see **[API Documentation](docs/backend/API_ENDPOINTS.md)**.
 
 ## 🔧 Configuration
 
@@ -116,7 +116,7 @@ The application can run entirely with sample data out-of-the-box. To ingest real
   * **`PROPUBLICA_API_KEY`**: For charitable grants from [ProPublica](https://www.propublica.org/datastore/api)
   * **`SEC_API_KEY`**: For corporate financial data from [SEC-API.io](https://sec-api.io/)
 
-For detailed configuration instructions, see **[In-Depth Configuration Guide](backend/in-depth-configuration.md)**.
+For detailed configuration instructions, see **[In-Depth Configuration Guide](docs/backend/in-depth-configuration.md)**.
 
 ## 📊 Data Ingestion
 
@@ -238,10 +238,11 @@ docker-compose exec backend python manage.py spectacular --validate
 ## 📈 Features
 
 ### Auto-Generated Documentation
-- **Zero Maintenance**: Documentation automatically stays in sync
-- **Interactive Testing**: Test endpoints directly from Swagger UI
-- **Type Safety**: Built-in parameter validation
-- **Real-time Updates**: No manual documentation updates needed
+- **24+ API Endpoints**: Comprehensive RESTful API with full CRUD operations
+- **Interactive Testing**: Test endpoints directly from Swagger UI and ReDoc
+- **OpenAPI 3.0**: Standards-compliant API specification
+- **Real-time Updates**: Documentation automatically stays in sync with code
+- **Export Ready**: Generate schemas for Postman, Insomnia, and other tools
 
 ### Data Processing
 - **Company Linking**: Automatic name normalization across data sources
@@ -249,11 +250,13 @@ docker-compose exec backend python manage.py spectacular --validate
 - **Data Quality Monitoring**: Comprehensive quality metrics and validation
 - **Error Handling**: Robust error handling with recovery strategies
 
-### Analytics
-- **Dashboard Summary**: Comprehensive statistics and spending breakdown
-- **Spending Comparison**: Compare spending across companies and categories
-- **Trends Analysis**: Historical spending trends and patterns
-- **Top Spenders**: Identify highest spending companies
+### Analytics & Visualizations
+- **Interactive Dashboard**: Real-time spending overview with Chart.js visualizations
+- **Spending Comparison**: Compare companies across all spending categories
+- **Trend Analysis**: Time-series charts showing historical patterns
+- **Top Spenders**: Dynamic rankings with filtering capabilities
+- **Category Breakdowns**: Pie charts for political contributions, donut charts for charitable giving
+- **Mobile-Responsive**: Optimized for desktop, tablet, and mobile viewing
 
 ## 🚀 Future Enhancements
 
@@ -274,9 +277,11 @@ docker-compose exec backend python manage.py spectacular --validate
 
 ## 📚 Additional Resources
 
-- **[API Endpoints Reference](API_ENDPOINTS.md)** - Complete API documentation
-- **[In-Depth Configuration Guide](backend/in-depth-configuration.md)** - Detailed configuration and setup
-- **[Auto-Generated API Docs Summary](AUTO_GENERATED_API_DOCS_SUMMARY.md)** - Implementation details
+- **[Documentation](docs/)** - Complete project documentation
+- **[API Endpoints Reference](docs/backend/API_ENDPOINTS.md)** - Complete API documentation
+- **[In-Depth Configuration Guide](docs/backend/in-depth-configuration.md)** - Detailed configuration and setup
+- **[Frontend Guide](docs/frontend/README.md)** - Frontend development and setup
+- **[Feature Updates](docs/FEATURE_UPDATES_SUMMARY.md)** - Recent improvements and changes
 
 ## 🤝 Support the Project
 
