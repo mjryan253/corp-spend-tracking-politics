@@ -1,5 +1,6 @@
 """
 Utility functions for calculating company spending across different categories.
+Enhanced with caching for improved performance.
 """
 from datetime import datetime, date
 from decimal import Decimal
@@ -8,6 +9,7 @@ from django.db.models import Sum, Q
 from django.db.models.query import QuerySet
 
 from ..models import Company, LobbyingReport, PoliticalContribution, CharitableGrant
+from ..cache.cache_manager import spending_cache, get_cached_spending_statistics, set_cached_spending_statistics
 
 
 class SpendingCalculator:
@@ -268,11 +270,16 @@ class SpendingCalculator:
     @staticmethod
     def get_spending_statistics() -> Dict[str, any]:
         """
-        Get overall spending statistics across the platform.
+        Get overall spending statistics across the platform with caching.
         
         Returns:
             Dictionary with aggregate spending statistics
         """
+        # Try to get from cache first
+        cached_stats = get_cached_spending_statistics()
+        if cached_stats:
+            return cached_stats
+        
         # Calculate totals across all companies
         total_lobbying = LobbyingReport.objects.aggregate(
             total=Sum('amount_spent')
@@ -300,7 +307,7 @@ class SpendingCalculator:
             'company_pac_id'
         ).distinct().count()
         
-        return {
+        stats = {
             'total_spending': float(total_spending),
             'spending_breakdown': {
                 'lobbying': float(total_lobbying),
@@ -317,3 +324,8 @@ class SpendingCalculator:
                 float(total_spending / total_companies) if total_companies > 0 else 0
             )
         }
+        
+        # Cache the results
+        set_cached_spending_statistics(stats)
+        
+        return stats
